@@ -483,6 +483,7 @@ function FoodBook({
       protein: String(sub.protein),
       calories: String(sub.calories),
       selected: sub.selected !== false,
+      qty: String(sub.qty ?? 1),
       ingredients: (sub.ingredients ?? []).map((ing) => ({
         id: ing.id,
         name: ing.name,
@@ -504,6 +505,7 @@ function FoodBook({
             protein: String(item.protein),
             calories: String(item.calories),
             selected: true,
+            qty: '1',
           },
           ...existingSubItems,
         ]
@@ -551,6 +553,25 @@ function FoodBook({
     )
   }
 
+  // Quick-pick from the card's qty chip menu (owner only — guests only ever
+  // get the plain include/exclude toggle below). qty 0 excludes the sub-item
+  // but keeps its stored qty, so re-including it restores the prior count.
+  const setSubItemQty = (id: string, subId: string, qty: number) => {
+    if (!isOwner) return
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const subItems = item.subItems ?? []
+        return {
+          ...item,
+          subItems: subItems.map((sub) =>
+            sub.id === subId ? { ...sub, selected: qty > 0, qty: qty > 0 ? qty : sub.qty } : sub,
+          ),
+        }
+      }),
+    )
+  }
+
   // Owner edits write straight to the shared record; guests can't write there,
   // so their taps flip a local-only override instead (see useGuestOverrides).
   const handleToggleSubItem = (id: string, subId: string) => {
@@ -574,6 +595,7 @@ function FoodBook({
         protein: toNumber(sub.protein),
         calories: toNumber(sub.calories),
         selected: sub.selected,
+        qty: toNumber(sub.qty) || 1,
         ingredients: (sub.ingredients ?? [])
           .filter((ing) => ing.name.trim().length > 0)
           .map((ing) => ({
@@ -735,6 +757,7 @@ function FoodBook({
                   onToggle={handleCardToggle}
                   onEdit={openEditModal}
                   onToggleSubItem={handleToggleSubItem}
+                  onSetSubItemQty={setSubItemQty}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}
                 />

@@ -3,7 +3,7 @@ import { Camera, Check, GripVertical, Plus, X } from 'lucide-react'
 import type { FoodDraft, FoodIngredientDraft, FoodSubItemDraft } from '../types'
 import { uploadToCloudinary } from '../cloudinary'
 import { useDialogDismiss } from '../useDialogDismiss'
-import { generateId, roundAmount, toNumber } from '../utils'
+import { formatAmount, generateId, roundAmount, toNumber } from '../utils'
 
 interface FoodModalProps {
   itemId: string
@@ -72,6 +72,7 @@ export function FoodModal({
       protein: '',
       calories: '',
       selected: true,
+      qty: '1',
     }
 
     // First sub-item: split the manually-entered base numbers out into their
@@ -87,6 +88,7 @@ export function FoodModal({
         protein: draft.protein,
         calories: draft.calories,
         selected: true,
+        qty: '1',
       }
       onChange({
         ...draft,
@@ -166,17 +168,16 @@ export function FoodModal({
   const subItemTotals = (sub: FoodSubItemDraft) => {
     const ingredients = sub.ingredients ?? []
     const hasIngredients = ingredients.length > 0
+    const qty = toNumber(sub.qty) || 1
+    const baseWeight = toNumber(sub.weight) + ingredients.reduce((sum, ing) => sum + toNumber(ing.weight), 0)
+    const baseCalories = toNumber(sub.calories) + ingredients.reduce((sum, ing) => sum + toNumber(ing.calories), 0)
+    const baseProtein = toNumber(sub.protein) + ingredients.reduce((sum, ing) => sum + toNumber(ing.protein), 0)
     return {
       hasIngredients,
-      weight: hasIngredients
-        ? roundAmount(toNumber(sub.weight) + ingredients.reduce((sum, ing) => sum + toNumber(ing.weight), 0))
-        : toNumber(sub.weight),
-      calories: hasIngredients
-        ? roundAmount(toNumber(sub.calories) + ingredients.reduce((sum, ing) => sum + toNumber(ing.calories), 0))
-        : toNumber(sub.calories),
-      protein: hasIngredients
-        ? roundAmount(toNumber(sub.protein) + ingredients.reduce((sum, ing) => sum + toNumber(ing.protein), 0))
-        : toNumber(sub.protein),
+      qty,
+      weight: roundAmount(baseWeight * qty),
+      calories: roundAmount(baseCalories * qty),
+      protein: roundAmount(baseProtein * qty),
     }
   }
 
@@ -537,6 +538,19 @@ export function FoodModal({
                         onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
                         placeholder="例如：加鯛魚"
                       />
+                      <div className="sub-item-qty-wrap" title="份數（幾份）">
+                        <span className="sub-item-qty-x">×</span>
+                        <input
+                          className="input sub-item-qty"
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.5"
+                          value={sub.qty}
+                          onChange={(e) => updateSubItem(sub.id, { qty: e.target.value })}
+                          aria-label="份數"
+                        />
+                      </div>
                       <button
                         type="button"
                         className="sub-item-remove"
@@ -554,7 +568,7 @@ export function FoodModal({
                         value={subTotals.hasIngredients ? subTotals.weight : sub.weight}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { weight: e.target.value })}
-                        placeholder="重量 (g)"
+                        placeholder={subTotals.qty !== 1 ? '每份重量 (g)' : '重量 (g)'}
                       />
                       <input
                         className="input"
@@ -563,7 +577,7 @@ export function FoodModal({
                         value={subTotals.hasIngredients ? subTotals.calories : sub.calories}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { calories: e.target.value })}
-                        placeholder="熱量 (kcal)"
+                        placeholder={subTotals.qty !== 1 ? '每份熱量 (kcal)' : '熱量 (kcal)'}
                       />
                       <input
                         className="input"
@@ -572,9 +586,15 @@ export function FoodModal({
                         value={subTotals.hasIngredients ? subTotals.protein : sub.protein}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { protein: e.target.value })}
-                        placeholder="蛋白質 (g)"
+                        placeholder={subTotals.qty !== 1 ? '每份蛋白質 (g)' : '蛋白質 (g)'}
                       />
                     </div>
+                    {subTotals.qty !== 1 && (
+                      <div className="sub-item-qty-hint">
+                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g・
+                        {formatAmount(subTotals.calories)}kcal・{formatAmount(subTotals.protein)}g
+                      </div>
+                    )}
 
                     <div className="ingredients-section">
                       <div className="ingredients-header">

@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Camera, Check, Pencil } from 'lucide-react'
-import type { FoodItem, SubItemOverrides } from '../types'
+import type { FoodItem, FoodSubItem, SubItemOverrides } from '../types'
 import { getFoodTotals, isSubItemSelected } from '../types'
-import { formatAmount } from '../utils'
+import { formatAmount, formatSubItemName } from '../utils'
 
 const LONG_PRESS_MS = 450
 const LONG_PRESS_MOVE_TOLERANCE = 10
@@ -20,6 +20,7 @@ interface FoodCardProps {
   onToggle: (id: string) => void
   onEdit: (id: string) => void
   onToggleSubItem: (id: string, subId: string) => void
+  onSetSubItemQty: (id: string, subId: string, qty: number) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
   guestOverrides?: SubItemOverrides
 }
@@ -35,6 +36,7 @@ export function FoodCard({
   onToggle,
   onEdit,
   onToggleSubItem,
+  onSetSubItemQty,
   onDragHandlePointerDown,
   guestOverrides,
 }: FoodCardProps) {
@@ -98,6 +100,49 @@ export function FoodCard({
     }
   }, [overflowMenuPos])
 
+  // Chips for a sub-item logged as more than one portion open a quick picker
+  // (instead of the plain include/exclude toggle) so you can say "only 3 of
+  // these 6" without going into the full edit modal.
+  const qtyMenuRef = useRef<HTMLDivElement | null>(null)
+  const [qtyMenu, setQtyMenu] = useState<{ subId: string; qty: number; top: number; left: number } | null>(null)
+
+  useEffect(() => {
+    if (!qtyMenu) return
+    const close = () => setQtyMenu(null)
+    const onPointerDown = (e: PointerEvent) => {
+      if (qtyMenuRef.current?.contains(e.target as Node)) return
+      close()
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [qtyMenu])
+
+  const handleChipClick = (e: React.MouseEvent<HTMLElement>, sub: FoodSubItem) => {
+    e.stopPropagation()
+    const qty = sub.qty ?? 1
+    if (readOnly || qty <= 1) {
+      onToggleSubItem(item.id, sub.id)
+      return
+    }
+    setOverflowMenuPos(null)
+    const rect = e.currentTarget.getBoundingClientRect()
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 220 - 8)
+    setQtyMenu({ subId: sub.id, qty, top: rect.bottom + 6, left })
+  }
+
+  const currentQtyMenuSub = qtyMenu ? subItems.find((s) => s.id === qtyMenu.subId) : undefined
+
   useLayoutEffect(() => {
     if (subItems.length === 0) return
     const container = chipsRef.current
@@ -130,7 +175,7 @@ export function FoodCard({
     ro.observe(container)
     return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subItems.map((s) => s.name).join('|')])
+  }, [subItems.map((s) => `${s.name}:${s.qty ?? 1}`).join('|')])
 
   const stopMomentum = () => {
     if (momentumFrame.current !== null) {
@@ -298,12 +343,9 @@ export function FoodCard({
               <span
                 key={sub.id}
                 className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'} is-toggleable`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleSubItem(item.id, sub.id)
-                }}
+                onClick={(e) => handleChipClick(e, sub)}
               >
-                {sub.name}
+                {formatSubItemName(sub)}
               </span>
             ))}
             {subItems.length > visibleChipCount && (
@@ -343,7 +385,7 @@ export function FoodCard({
                   className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
                   style={{ flex: 'none' }}
                 >
-                  {sub.name}
+                  {formatSubItemName(sub)}
                 </span>
               ))}
               <span data-more className="sub-item-chip is-more" style={{ flex: 'none' }}>
@@ -377,11 +419,39 @@ export function FoodCard({
                 key={sub.id}
                 type="button"
                 className={`sub-item-overflow-row${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
-                onClick={() => onToggleSubItem(item.id, sub.id)}
+                onClick={(e) => handleChipClick(e, sub)}
               >
-                {sub.name}
+                {formatSubItemName(sub)}
               </button>
             ))}
+          </div>,
+          document.body,
+        )}
+      {qtyMenu &&
+        currentQtyMenuSub &&
+        createPortal(
+          <div
+            ref={qtyMenuRef}
+            className="sub-item-qty-menu"
+            style={{ top: qtyMenu.top, left: qtyMenu.left }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {Array.from({ length: Math.floor(qtyMenu.qty) + 1 }, (_, n) => n).map((n) => {
+              const active = (currentQtyMenuSub.selected !== false ? (currentQtyMenuSub.qty ?? 1) : 0) === n
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  className={`sub-item-qty-menu-btn${active ? ' is-active' : ''}`}
+                  onClick={() => {
+                    onSetSubItemQty(item.id, qtyMenu.subId, n)
+                    setQtyMenu(null)
+                  }}
+                >
+                  {n}
+                </button>
+              )
+            })}
           </div>,
           document.body,
         )}

@@ -1,6 +1,11 @@
 import type { FoodItem, SubItemOverrides } from './types'
 import { getFoodTotals, getSubItemTotals } from './types'
 
+export function formatSubItemName(sub: { name: string; qty?: number }): string {
+  const qty = sub.qty ?? 1
+  return qty !== 1 ? `${sub.name} ×${formatAmount(qty)}` : sub.name
+}
+
 export function toNumber(value: string): number {
   const n = Number(value)
   return Number.isFinite(n) ? n : 0
@@ -37,14 +42,15 @@ export function formatItemsAsText(
     )
     for (const sub of item.subItems ?? []) {
       const subTotals = getSubItemTotals(sub)
-      lines.push(`   - ${sub.name}：重量 ${formatAmount(subTotals.weight)}g`)
+      const qty = sub.qty ?? 1
+      lines.push(`   - ${formatSubItemName(sub)}：重量 ${formatAmount(subTotals.weight)}g`)
       lines.push(
         `     熱量 ${formatAmount(subTotals.calories)}kcal / 蛋白質 ${formatAmount(subTotals.protein)}g`,
       )
       for (const ing of sub.ingredients ?? []) {
-        lines.push(`     · ${ing.name}：重量 ${formatAmount(ing.weight)}g`)
+        lines.push(`     · ${ing.name}：重量 ${formatAmount(ing.weight * qty)}g`)
         lines.push(
-          `       熱量 ${formatAmount(ing.calories)}kcal / 蛋白質 ${formatAmount(ing.protein)}g`,
+          `       熱量 ${formatAmount(ing.calories * qty)}kcal / 蛋白質 ${formatAmount(ing.protein * qty)}g`,
         )
       }
     }

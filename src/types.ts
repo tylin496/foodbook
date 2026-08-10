@@ -16,6 +16,10 @@ export interface FoodSubItem {
   protein: number
   calories: number
   selected: boolean
+  // How many portions of this sub-item's weight/protein/calories were
+  // consumed — those three fields hold the per-portion value, this scales
+  // them for totals. Missing/undefined means 1 (all pre-existing records).
+  qty?: number
   ingredients?: FoodIngredient[]
 }
 
@@ -45,6 +49,7 @@ export type FoodSubItemDraft = {
   protein: string
   calories: string
   selected: boolean
+  qty: string
   ingredients?: FoodIngredientDraft[]
 }
 
@@ -93,10 +98,11 @@ function sumIngredients(ingredients?: FoodIngredient[]): {
 // (via selected/overrides) drops its ingredients along with it.
 export function getSubItemTotals(sub: FoodSubItem): { weight: number; protein: number; calories: number } {
   const ingredientTotals = sumIngredients(sub.ingredients)
+  const qty = sub.qty ?? 1
   return {
-    weight: sub.weight + ingredientTotals.weight,
-    protein: sub.protein + ingredientTotals.protein,
-    calories: sub.calories + ingredientTotals.calories,
+    weight: (sub.weight + ingredientTotals.weight) * qty,
+    protein: (sub.protein + ingredientTotals.protein) * qty,
+    calories: (sub.calories + ingredientTotals.calories) * qty,
   }
 }
 
