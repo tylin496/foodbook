@@ -542,13 +542,13 @@ body::before {
   height: 100%; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: calc(28px + env(safe-area-inset-top)) 16px calc(104px + env(safe-area-inset-bottom));
+  padding: calc(28px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
   background: var(--page-bg);
 }
 .page-scroll::-webkit-scrollbar { display: none; }
 @media (max-width: 430px) {
   .page-scroll {
-    padding: calc(22px + env(safe-area-inset-top)) 14px calc(96px + env(safe-area-inset-bottom));
+    padding: calc(22px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));
   }
 }
 .page-content { max-width: 1440px; margin: 0 auto; }
