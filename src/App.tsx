@@ -9,7 +9,7 @@ import { emptyDraft, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
-import { SubwayScreen } from './components/SubwayScreen'
+import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
 import { formatItemsAsText, generateId, toNumber } from './utils'
 
 const GRAYSCALE_PHOTOS = false
@@ -17,6 +17,11 @@ const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
 // Launches the embedded calculator instead of toggling into the selection total.
 const SUBWAY_ITEM_NAME = 'Subway'
 const SUBWAY_CLOSE_MS = 220
+// Trusted regardless of where Foodbook itself is served from (dev vs. prod) —
+// the iframe always points at the live calculator at this fixed origin.
+const SUBWAY_ORIGIN = new URL(SUBWAY_CALCULATOR_URL).origin
+
+type SubwayResult = { hasSelection: boolean; mainName?: string; kcal?: number; protein?: number }
 
 export default function App() {
   const { user, loading: authLoading, signIn, logOut } = useAuth()
@@ -72,8 +77,56 @@ function FoodBook({
     return () => window.clearTimeout(timer)
   }, [])
 
+  // The calculator posts its current build on every change; we just keep the
+  // latest one and apply it when the user backs out, rather than writing to
+  // Firestore on every tap inside the iframe.
+  const subwayResultRef = useRef<SubwayResult | null>(null)
+
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.origin !== SUBWAY_ORIGIN) return
+      if (e.data?.source !== 'subway-calculator') return
+      subwayResultRef.current = e.data as SubwayResult
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
+  // Folds the calculator's current build back onto the Subway card's chip and
+  // totals — owners get it written to the shared record, guests just get it
+  // added to their local running total (they can't write the shared record).
+  const applySubwayResult = (result: SubwayResult) => {
+    if (!result.hasSelection || !result.mainName) return
+    const subwayItem = items.find((item) => item.name === SUBWAY_ITEM_NAME)
+    if (!subwayItem) return
+    if (isOwner) {
+      const subId = subwayItem.subItems?.[0]?.id ?? generateId()
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === subwayItem.id
+            ? {
+                ...item,
+                subItems: [
+                  {
+                    id: subId,
+                    name: result.mainName!,
+                    weight: 0,
+                    protein: result.protein ?? 0,
+                    calories: result.kcal ?? 0,
+                    selected: true,
+                  },
+                ],
+              }
+            : item,
+        ),
+      )
+    }
+    setSelectedIds((prev) => new Set(prev).add(subwayItem.id))
+  }
+
   const closeSubway = () => {
     if (subwayClosing) return
+    if (subwayResultRef.current) applySubwayResult(subwayResultRef.current)
     setSubwayClosing(true)
     window.setTimeout(() => {
       setSubwayOpen(false)

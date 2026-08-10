@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { ChevronLeft } from 'lucide-react'
 
-const SUBWAY_CALCULATOR_URL = 'https://tylin496.github.io/subway-calculator/'
+export const SUBWAY_CALCULATOR_URL = 'https://tylin496.github.io/subway-calculator/'
 
 interface SubwayScreenProps {
   // Stays mounted (and its iframe alive) even while hidden, so it can be
