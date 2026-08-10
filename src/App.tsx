@@ -9,10 +9,14 @@ import { emptyDraft, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
+import { SubwayScreen } from './components/SubwayScreen'
 import { formatItemsAsText, generateId, toNumber } from './utils'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
+// Launches the embedded calculator instead of toggling into the selection total.
+const SUBWAY_ITEM_NAME = 'Subway'
+const SUBWAY_CLOSE_MS = 220
 
 export default function App() {
   const { user, loading: authLoading, signIn, logOut } = useAuth()
@@ -55,6 +59,18 @@ function FoodBook({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [draft, setDraft] = useState<FoodDraft>(emptyDraft)
+
+  const [subwayOpen, setSubwayOpen] = useState(false)
+  const [subwayClosing, setSubwayClosing] = useState(false)
+
+  const closeSubway = () => {
+    if (subwayClosing) return
+    setSubwayClosing(true)
+    window.setTimeout(() => {
+      setSubwayOpen(false)
+      setSubwayClosing(false)
+    }, SUBWAY_CLOSE_MS)
+  }
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -291,6 +307,15 @@ function FoodBook({
       else next.add(id)
       return next
     })
+  }
+
+  const handleCardToggle = (id: string) => {
+    const item = items.find((i) => i.id === id)
+    if (item?.name === SUBWAY_ITEM_NAME) {
+      setSubwayOpen(true)
+      return
+    }
+    toggleSelect(id)
   }
 
   const clearSelection = () => setSelectedIds(new Set())
@@ -644,7 +669,7 @@ function FoodBook({
                   reorderEnabled={reorderEnabled}
                   dragging={draggingId === item.id}
                   removing={removingIds.has(item.id)}
-                  onToggle={toggleSelect}
+                  onToggle={handleCardToggle}
                   onEdit={openEditModal}
                   onToggleSubItem={handleToggleSubItem}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
@@ -680,6 +705,8 @@ function FoodBook({
           onMerge={() => editingId && mergeIntoItem(editingId, mergeCandidateIds)}
         />
       )}
+
+      {subwayOpen && <SubwayScreen closing={subwayClosing} onClose={closeSubway} />}
     </>
   )
 }
