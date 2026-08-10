@@ -429,9 +429,9 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-backdrop {
   position: fixed; inset: 0; display: grid; place-items: center;
   /* Above every stacked page chrome — the cards' edit/drag buttons (z-index 2
-     in the root stacking context), the selection bar (50), a card being
-     dragged (60) and the status-bar scrim (60) — all of which otherwise paint
-     straight through the backdrop and over the dialog. */
+     in the root stacking context), the selection bar (50), and a card being
+     dragged (60) — all of which otherwise paint straight through the
+     backdrop and over the dialog. */
   z-index: 100;
   padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
     calc(var(--space-4) + env(safe-area-inset-bottom));
@@ -524,18 +524,6 @@ textarea.input { min-height: 90px; resize: vertical; }
 
 html, body, #root { height: 100%; }
 body { background: var(--bg); }
-
-/* — status bar scrim — the page runs full-bleed under the system status bar
-   (viewport-fit=cover), so this frosted strip keeps the clock legible while
-   letting the content show through it. */
-body::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top);
-  z-index: 60; pointer-events: none;
-  background: var(--glass-bg);
-  backdrop-filter: saturate(180%) blur(18px);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-}
 
 /* — page scroller — */
 .page-scroll {
