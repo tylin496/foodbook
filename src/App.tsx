@@ -60,8 +60,17 @@ function FoodBook({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [draft, setDraft] = useState<FoodDraft>(emptyDraft)
 
+  // Stays true once set — the iframe keeps loading/running in the background
+  // (hidden) so reopening never re-fetches, and any in-progress order survives
+  // a close/reopen. Pre-warmed shortly after load so the first tap is instant too.
+  const [subwayMounted, setSubwayMounted] = useState(false)
   const [subwayOpen, setSubwayOpen] = useState(false)
   const [subwayClosing, setSubwayClosing] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSubwayMounted(true), 1500)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const closeSubway = () => {
     if (subwayClosing) return
@@ -312,6 +321,7 @@ function FoodBook({
   const handleCardToggle = (id: string) => {
     const item = items.find((i) => i.id === id)
     if (item?.name === SUBWAY_ITEM_NAME) {
+      setSubwayMounted(true)
       setSubwayOpen(true)
       return
     }
@@ -706,7 +716,9 @@ function FoodBook({
         />
       )}
 
-      {subwayOpen && <SubwayScreen closing={subwayClosing} onClose={closeSubway} />}
+      {subwayMounted && (
+        <SubwayScreen visible={subwayOpen} closing={subwayClosing} onClose={closeSubway} />
+      )}
     </>
   )
 }

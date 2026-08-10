@@ -481,6 +481,13 @@ textarea.input { min-height: 90px; resize: vertical; }
 .subway-screen {
   position: fixed; inset: 0; z-index: 500;
   background: #000;
+}
+/* Pre-mounted but not yet opened (or closed again) — kept in the DOM so the
+   iframe stays loaded/alive, just invisible and non-interactive. */
+.subway-screen.is-hidden {
+  visibility: hidden; pointer-events: none;
+}
+.subway-screen.is-open {
   animation: subway-in 360ms var(--motion-entrance-bold);
 }
 .subway-screen.is-closing {
