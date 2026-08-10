@@ -767,7 +767,7 @@ body::before {
   padding: 0 7px; cursor: pointer;
 }
 
-.sub-item-overflow-menu {
+.sub-item-chip-menu {
   position: fixed; z-index: 40;
   display: flex; flex-direction: column; gap: 2px;
   padding: 6px; border-radius: var(--radius-md);
@@ -785,18 +785,24 @@ body::before {
 .sub-item-overflow-row:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .sub-item-overflow-row.is-excluded { color: var(--ink-4); }
 
-.sub-item-qty-menu {
-  position: fixed; z-index: 40;
-  display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px;
-  padding: 6px; border-radius: var(--radius-md);
-  background: var(--color-surface); box-shadow: var(--shadow-lg);
-  animation: dialog-in 200ms var(--motion-entrance-bold);
+.sub-item-chip-menu-qty-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 8px;
+}
+.sub-item-chip-menu-qty-label {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.sub-item-chip-menu-qty-label.is-excluded { color: var(--ink-4); }
+.sub-item-chip-menu-qty-btns {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: none;
 }
 .sub-item-qty-menu-btn {
   all: unset; box-sizing: border-box; cursor: pointer; text-align: center;
   font-family: var(--font-ui); font-size: 13px; font-weight: 600;
   color: var(--ink-2);
-  width: 28px; height: 28px; line-height: 28px;
+  width: 24px; height: 24px; line-height: 24px;
   border-radius: var(--radius-sm);
   box-shadow: inset 0 0 0 1px var(--off-ring);
   transition: background 120ms var(--ease-press);

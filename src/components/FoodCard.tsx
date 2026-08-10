@@ -7,7 +7,7 @@ import { formatAmount, formatSubItemName } from '../utils'
 
 const LONG_PRESS_MS = 450
 const LONG_PRESS_MOVE_TOLERANCE = 10
-const OVERFLOW_MENU_WIDTH = 180
+const CHIP_MENU_WIDTH = 220
 
 interface FoodCardProps {
   item: FoodItem
@@ -71,18 +71,20 @@ export function FoodCard({
   const chipMeasureRef = useRef<HTMLDivElement | null>(null)
   const [visibleChipCount, setVisibleChipCount] = useState(subItems.length)
 
-  // The "+N" chip opens a small popover listing the sub-items that didn't fit,
-  // so they stay toggleable instead of being stranded off-screen.
+  // Any chip (including the "+N" overflow chip) opens the same popover listing
+  // every sub-item on the card, so you can check/uncheck ones that didn't fit
+  // without hunting for their specific chip, and adjust a >1-qty item's count
+  // inline without opening the full edit modal.
   const moreChipRef = useRef<HTMLSpanElement | null>(null)
-  const overflowMenuRef = useRef<HTMLDivElement | null>(null)
-  const [overflowMenuPos, setOverflowMenuPos] = useState<{ top: number; left: number } | null>(null)
+  const chipMenuRef = useRef<HTMLDivElement | null>(null)
+  const [chipMenuPos, setChipMenuPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
-    if (!overflowMenuPos) return
-    const close = () => setOverflowMenuPos(null)
+    if (!chipMenuPos) return
+    const close = () => setChipMenuPos(null)
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node
-      if (overflowMenuRef.current?.contains(target) || moreChipRef.current?.contains(target)) return
+      if (chipMenuRef.current?.contains(target) || moreChipRef.current?.contains(target)) return
       close()
     }
     const onKeyDown = (e: KeyboardEvent) => {
@@ -98,50 +100,23 @@ export function FoodCard({
       window.removeEventListener('scroll', close, true)
       window.removeEventListener('resize', close)
     }
-  }, [overflowMenuPos])
+  }, [chipMenuPos])
 
-  // Chips for a sub-item logged as more than one portion open a quick picker
-  // (instead of the plain include/exclude toggle) so you can say "only 3 of
-  // these 6" without going into the full edit modal.
-  const qtyMenuRef = useRef<HTMLDivElement | null>(null)
-  const [qtyMenu, setQtyMenu] = useState<{ subId: string; qty: number; top: number; left: number } | null>(null)
-
-  useEffect(() => {
-    if (!qtyMenu) return
-    const close = () => setQtyMenu(null)
-    const onPointerDown = (e: PointerEvent) => {
-      if (qtyMenuRef.current?.contains(e.target as Node)) return
-      close()
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
-    }
-  }, [qtyMenu])
+  const openChipMenu = (e: React.MouseEvent<HTMLElement>) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - CHIP_MENU_WIDTH - 8)
+    setChipMenuPos((pos) => (pos ? null : { top: rect.bottom + 6, left }))
+  }
 
   const handleChipClick = (e: React.MouseEvent<HTMLElement>, sub: FoodSubItem) => {
-    e.stopPropagation()
-    const qty = sub.qty ?? 1
-    if (readOnly || qty <= 1) {
+    if (readOnly) {
+      e.stopPropagation()
       onToggleSubItem(item.id, sub.id)
       return
     }
-    setOverflowMenuPos(null)
-    const rect = e.currentTarget.getBoundingClientRect()
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 220 - 8)
-    setQtyMenu({ subId: sub.id, qty, top: rect.bottom + 6, left })
+    openChipMenu(e)
   }
-
-  const currentQtyMenuSub = qtyMenu ? subItems.find((s) => s.id === qtyMenu.subId) : undefined
 
   useLayoutEffect(() => {
     if (subItems.length === 0) return
@@ -352,13 +327,7 @@ export function FoodCard({
               <span
                 ref={moreChipRef}
                 className="sub-item-chip is-more"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  let left = rect.right - OVERFLOW_MENU_WIDTH
-                  left = Math.min(Math.max(8, left), window.innerWidth - OVERFLOW_MENU_WIDTH - 8)
-                  setOverflowMenuPos((pos) => (pos ? null : { top: rect.bottom + 6, left }))
-                }}
+                onClick={openChipMenu}
               >
                 +{subItems.length - visibleChipCount}
               </span>
@@ -406,50 +375,52 @@ export function FoodCard({
           </div>
         </div>
       </div>
-      {overflowMenuPos &&
+      {chipMenuPos &&
         createPortal(
           <div
-            ref={overflowMenuRef}
-            className="sub-item-overflow-menu"
-            style={{ top: overflowMenuPos.top, left: overflowMenuPos.left, width: OVERFLOW_MENU_WIDTH }}
+            ref={chipMenuRef}
+            className="sub-item-chip-menu"
+            style={{ top: chipMenuPos.top, left: chipMenuPos.left, width: CHIP_MENU_WIDTH }}
             onClick={(e) => e.stopPropagation()}
           >
-            {subItems.slice(visibleChipCount).map((sub) => (
-              <button
-                key={sub.id}
-                type="button"
-                className={`sub-item-overflow-row${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
-                onClick={(e) => handleChipClick(e, sub)}
-              >
-                {formatSubItemName(sub)}
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-      {qtyMenu &&
-        currentQtyMenuSub &&
-        createPortal(
-          <div
-            ref={qtyMenuRef}
-            className="sub-item-qty-menu"
-            style={{ top: qtyMenu.top, left: qtyMenu.left }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {Array.from({ length: Math.floor(qtyMenu.qty) + 1 }, (_, n) => n).map((n) => {
-              const active = (currentQtyMenuSub.selected !== false ? (currentQtyMenuSub.qty ?? 1) : 0) === n
+            {subItems.map((sub) => {
+              const qty = sub.qty ?? 1
+              if (qty <= 1) {
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    className={`sub-item-overflow-row${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
+                    onClick={() => {
+                      onToggleSubItem(item.id, sub.id)
+                      setChipMenuPos(null)
+                    }}
+                  >
+                    {formatSubItemName(sub)}
+                  </button>
+                )
+              }
+              const activeN = sub.selected !== false ? (sub.qty ?? 1) : 0
               return (
-                <button
-                  key={n}
-                  type="button"
-                  className={`sub-item-qty-menu-btn${active ? ' is-active' : ''}`}
-                  onClick={() => {
-                    onSetSubItemQty(item.id, qtyMenu.subId, n)
-                    setQtyMenu(null)
-                  }}
-                >
-                  {n}
-                </button>
+                <div key={sub.id} className="sub-item-chip-menu-qty-row">
+                  <span
+                    className={`sub-item-chip-menu-qty-label${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
+                  >
+                    {sub.name}
+                  </span>
+                  <div className="sub-item-chip-menu-qty-btns">
+                    {Array.from({ length: Math.floor(qty) + 1 }, (_, n) => n).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`sub-item-qty-menu-btn${activeN === n ? ' is-active' : ''}`}
+                        onClick={() => onSetSubItemQty(item.id, sub.id, n)}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )
             })}
           </div>,
