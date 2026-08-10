@@ -111,6 +111,15 @@ export function FoodModal({
   }
 
   const selectSubItem = (id: string, selected: boolean) => {
+    if (!selected) {
+      // Unchecking drops the row to the bottom of the list instead of leaving
+      // it in place, so active items stay grouped at the top.
+      const target = draft.subItems.find((sub) => sub.id === id)
+      if (!target) return
+      const rest = draft.subItems.filter((sub) => sub.id !== id)
+      onChange({ ...draft, subItems: [...rest, { ...target, selected }] })
+      return
+    }
     updateSubItem(id, { selected })
   }
 

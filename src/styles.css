@@ -986,7 +986,6 @@ body::before {
   padding: var(--space-2); background: var(--color-bg);
   border: 1px solid var(--color-divider);
 }
-.sub-item-row.is-excluded { opacity: 0.5; }
 .sub-item-row.is-dragging { position: relative; cursor: grabbing; opacity: 1; }
 .sub-item-row-top { display: flex; gap: 6px; align-items: center; }
 .sub-item-row-top .input { flex: 1; }
