@@ -4,6 +4,9 @@ import { Camera, Check, Pencil } from 'lucide-react'
 import type { FoodItem, FoodSubItem, SubItemOverrides } from '../types'
 import { getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
+import { SubItemDetailSheet } from './SubItemDetailSheet'
+
+const DETAIL_CLOSE_MS = 180
 
 const LONG_PRESS_MS = 450
 const LONG_PRESS_MOVE_TOLERANCE = 10
@@ -100,48 +103,34 @@ export function FoodCard({
     }
   }, [overflowMenuPos])
 
-  // Chips for a sub-item logged as more than one portion open a quick picker
-  // (instead of the plain include/exclude toggle) so you can say "only 3 of
-  // these 6" without going into the full edit modal.
-  const qtyMenuRef = useRef<HTMLDivElement | null>(null)
-  const [qtyMenu, setQtyMenu] = useState<{ subId: string; qty: number; top: number; left: number } | null>(null)
+  // A chip click expands into a full detail sheet — name, stats, ingredients,
+  // and (owner only) a quantity picker — instead of toggling inline.
+  const [detailSubId, setDetailSubId] = useState<string | null>(null)
+  const [detailClosing, setDetailClosing] = useState(false)
+  const detailCloseTimer = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!qtyMenu) return
-    const close = () => setQtyMenu(null)
-    const onPointerDown = (e: PointerEvent) => {
-      if (qtyMenuRef.current?.contains(e.target as Node)) return
-      close()
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
     return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
+      if (detailCloseTimer.current !== null) window.clearTimeout(detailCloseTimer.current)
     }
-  }, [qtyMenu])
+  }, [])
+
+  const closeDetail = () => {
+    if (detailClosing) return
+    setDetailClosing(true)
+    detailCloseTimer.current = window.setTimeout(() => {
+      setDetailSubId(null)
+      setDetailClosing(false)
+    }, DETAIL_CLOSE_MS)
+  }
 
   const handleChipClick = (e: React.MouseEvent<HTMLElement>, sub: FoodSubItem) => {
     e.stopPropagation()
-    const qty = sub.qty ?? 1
-    if (readOnly || qty <= 1) {
-      onToggleSubItem(item.id, sub.id)
-      return
-    }
     setOverflowMenuPos(null)
-    const rect = e.currentTarget.getBoundingClientRect()
-    const left = Math.min(Math.max(8, rect.left), window.innerWidth - 220 - 8)
-    setQtyMenu({ subId: sub.id, qty, top: rect.bottom + 6, left })
+    setDetailSubId(sub.id)
   }
 
-  const currentQtyMenuSub = qtyMenu ? subItems.find((s) => s.id === qtyMenu.subId) : undefined
+  const detailSub = detailSubId ? subItems.find((s) => s.id === detailSubId) : undefined
 
   useLayoutEffect(() => {
     if (subItems.length === 0) return
@@ -427,34 +416,17 @@ export function FoodCard({
           </div>,
           document.body,
         )}
-      {qtyMenu &&
-        currentQtyMenuSub &&
-        createPortal(
-          <div
-            ref={qtyMenuRef}
-            className="sub-item-qty-menu"
-            style={{ top: qtyMenu.top, left: qtyMenu.left }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {Array.from({ length: Math.floor(qtyMenu.qty) + 1 }, (_, n) => n).map((n) => {
-              const active = (currentQtyMenuSub.selected !== false ? (currentQtyMenuSub.qty ?? 1) : 0) === n
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  className={`sub-item-qty-menu-btn${active ? ' is-active' : ''}`}
-                  onClick={() => {
-                    onSetSubItemQty(item.id, qtyMenu.subId, n)
-                    setQtyMenu(null)
-                  }}
-                >
-                  {n}
-                </button>
-              )
-            })}
-          </div>,
-          document.body,
-        )}
+      {detailSub && (
+        <SubItemDetailSheet
+          sub={detailSub}
+          readOnly={readOnly}
+          guestOverrides={guestOverrides}
+          closing={detailClosing}
+          onClose={closeDetail}
+          onToggle={() => onToggleSubItem(item.id, detailSub.id)}
+          onSetQty={(qty) => onSetSubItemQty(item.id, detailSub.id, qty)}
+        />
+      )}
     </div>
   )
 }
