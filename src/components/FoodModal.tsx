@@ -59,6 +59,13 @@ export function FoodModal({
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, true)
 
+  // min="0" on these fields doesn't actually stop a typed/pasted "-5" — with
+  // no <form> wrapping the dialog, the constraint validation it depends on
+  // never runs, so it only disables the spinner below 0. Clamp the typed
+  // value itself so a stray minus sign can't reach the stored draft (and
+  // from there getFoodTotals) at all.
+  const clampNonNegative = (raw: string) => (toNumber(raw) < 0 ? '0' : raw)
+
   const handleSaveClick = async () => {
     if (draft.name.trim().length === 0 || saveState === 'saving' || saveState === 'success') return
     setSaveState('saving')
@@ -474,7 +481,7 @@ export function FoodModal({
               min="0"
               value={hasSubItems ? totalCalories : draft.calories}
               disabled={hasSubItems}
-              onChange={(e) => onChange({ ...draft, calories: e.target.value })}
+              onChange={(e) => onChange({ ...draft, calories: clampNonNegative(e.target.value) })}
               placeholder="0"
             />
           </div>
@@ -488,7 +495,7 @@ export function FoodModal({
               min="0"
               value={hasSubItems ? totalProtein : draft.protein}
               disabled={hasSubItems}
-              onChange={(e) => onChange({ ...draft, protein: e.target.value })}
+              onChange={(e) => onChange({ ...draft, protein: clampNonNegative(e.target.value) })}
               placeholder="0"
             />
           </div>
@@ -502,7 +509,7 @@ export function FoodModal({
               min="0"
               value={hasSubItems ? totalWeight : draft.weight}
               disabled={hasSubItems}
-              onChange={(e) => onChange({ ...draft, weight: e.target.value })}
+              onChange={(e) => onChange({ ...draft, weight: clampNonNegative(e.target.value) })}
               placeholder="0"
             />
           </div>
@@ -594,7 +601,7 @@ export function FoodModal({
                           min="0"
                           step="0.5"
                           value={sub.qty}
-                          onChange={(e) => updateSubItem(sub.id, { qty: e.target.value })}
+                          onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
                           aria-label="份數"
                         />
                       </div>
@@ -615,7 +622,7 @@ export function FoodModal({
                         min="0"
                         value={subTotals.hasIngredients ? subTotals.weight : sub.weight}
                         disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { weight: e.target.value })}
+                        onChange={(e) => updateSubItem(sub.id, { weight: clampNonNegative(e.target.value) })}
                         placeholder={subTotals.qty !== 1 ? '每份重量 (g)' : '重量 (g)'}
                       />
                       <input
@@ -625,7 +632,7 @@ export function FoodModal({
                         min="0"
                         value={subTotals.hasIngredients ? subTotals.calories : sub.calories}
                         disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { calories: e.target.value })}
+                        onChange={(e) => updateSubItem(sub.id, { calories: clampNonNegative(e.target.value) })}
                         placeholder={subTotals.qty !== 1 ? '每份熱量 (kcal)' : '熱量 (kcal)'}
                       />
                       <input
@@ -635,7 +642,7 @@ export function FoodModal({
                         min="0"
                         value={subTotals.hasIngredients ? subTotals.protein : sub.protein}
                         disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { protein: e.target.value })}
+                        onChange={(e) => updateSubItem(sub.id, { protein: clampNonNegative(e.target.value) })}
                         placeholder={subTotals.qty !== 1 ? '每份蛋白質 (g)' : '蛋白質 (g)'}
                       />
                     </div>
@@ -685,7 +692,9 @@ export function FoodModal({
                                   inputMode="decimal"
                                   min="0"
                                   value={ing.weight}
-                                  onChange={(e) => updateIngredient(sub.id, ing.id, { weight: e.target.value })}
+                                  onChange={(e) =>
+                                    updateIngredient(sub.id, ing.id, { weight: clampNonNegative(e.target.value) })
+                                  }
                                   placeholder="重量 (g)"
                                 />
                                 <input
@@ -694,7 +703,9 @@ export function FoodModal({
                                   inputMode="decimal"
                                   min="0"
                                   value={ing.calories}
-                                  onChange={(e) => updateIngredient(sub.id, ing.id, { calories: e.target.value })}
+                                  onChange={(e) =>
+                                    updateIngredient(sub.id, ing.id, { calories: clampNonNegative(e.target.value) })
+                                  }
                                   placeholder="熱量 (kcal)"
                                 />
                                 <input
@@ -703,7 +714,9 @@ export function FoodModal({
                                   inputMode="decimal"
                                   min="0"
                                   value={ing.protein}
-                                  onChange={(e) => updateIngredient(sub.id, ing.id, { protein: e.target.value })}
+                                  onChange={(e) =>
+                                    updateIngredient(sub.id, ing.id, { protein: clampNonNegative(e.target.value) })
+                                  }
                                   placeholder="蛋白質 (g)"
                                 />
                               </div>
