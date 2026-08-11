@@ -102,7 +102,12 @@
   --space-6: 24.0px;
   --space-8: 32.0px;
 
-  --radius-sm: 0px;
+  /* --radius-sm deliberately not redeclared here: this block's --radius-md/lg
+     are for the unused foundational classes below (.card, .tag, .seg, ...),
+     but --radius-sm is only ever consumed by the live LiftOS components
+     (search bar, dialog inputs, Subway iframe frame, ...) — a same-name
+     :root redeclaration here silently clobbered their 10px rounding down to
+     0, rendering them square next to the food card's 14px corners. */
   --radius-md: 0px;
   --radius-lg: 0px;
 
