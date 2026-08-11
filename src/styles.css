@@ -425,7 +425,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 .search-bar svg { flex: none; }
 .search-bar input {
   flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
-  font-family: var(--font-ui); font-size: 14px; color: var(--ink);
+  font-family: var(--font-ui); font-size: 16px; color: var(--ink);
 }
 .search-clear {
   position: relative;
@@ -1035,16 +1035,6 @@ body { background: var(--bg); }
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 
-.merge-hint {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: var(--space-3); padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
-  border-radius: var(--radius-md);
-  font-size: 12px; color: var(--color-text);
-}
-.merge-hint .btn-ghost { font-size: 12px; padding: 4px var(--space-1); }
-
 .sub-items-section { margin-top: var(--space-3); }
 .sub-items-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -1090,7 +1080,7 @@ body { background: var(--bg); }
 .sub-item-row-numbers {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
 }
-.sub-item-row-numbers .input { font-size: 13px; }
+.sub-item-row-numbers .input { font-size: 16px; }
 .sub-item-qty-wrap { flex: none; display: flex; align-items: center; gap: 2px; }
 .sub-item-qty-wrap .sub-item-qty-x {
   font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent);
@@ -1123,7 +1113,7 @@ body { background: var(--bg); }
 .ingredient-row-numbers {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
 }
-.ingredient-row-numbers .input { font-size: 12px; }
+.ingredient-row-numbers .input { font-size: 16px; }
 
 .dialog-close {
   position: relative;

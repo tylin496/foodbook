@@ -491,41 +491,6 @@ function FoodBook({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [filteredItems, modalOpen, selectedItems])
 
-  const mergeIntoItem = async (baseId: string, mergeIds: string[]) => {
-    if (!isOwner || mergeIds.length === 0) return
-    const base = items.find((item) => item.id === baseId)
-    if (!base) return
-    const mergeItems = items.filter((item) => mergeIds.includes(item.id))
-    const ok = await confirm(`確定要將這 ${mergeItems.length} 項合併進「${base.name}」嗎？`, {
-      description: '合併後個別項目將消失，但數值會保留為子項目。',
-    })
-    if (!ok) return
-
-    const mergedSubItems = [
-      ...(base.subItems ?? []),
-      ...mergeItems.flatMap((item) => [
-        {
-          id: generateId(),
-          name: item.name,
-          weight: item.weight,
-          protein: item.protein,
-          calories: item.calories,
-          selected: true,
-        },
-        ...(item.subItems ?? []).map((sub) => ({ ...sub, selected: true })),
-      ]),
-    ]
-    const removeIds = new Set(mergeIds)
-
-    setItems((prev) =>
-      prev
-        .filter((item) => !removeIds.has(item.id))
-        .map((item) => (item.id === baseId ? { ...item, subItems: mergedSubItems } : item)),
-    )
-    setSelectedIds(new Set())
-    closeModal()
-  }
-
   const openAddModal = () => {
     if (!isOwner) return
     setEditingId(null)
@@ -758,10 +723,6 @@ function FoodBook({
     }, 230)
   }
 
-  const mergeCandidateIds = editingId
-    ? selectedItems.filter((item) => item.id !== editingId).map((item) => item.id)
-    : []
-
   const hasAnyItems = items.length > 0
   const hasResults = filteredItems.length > 0
 
@@ -908,8 +869,6 @@ function FoodBook({
           onCancel={closeModal}
           onDelete={() => editingId && deleteItem(editingId)}
           onImageUploaded={handleImageUploaded}
-          mergeCandidateCount={mergeCandidateIds.length}
-          onMerge={() => editingId && mergeIntoItem(editingId, mergeCandidateIds)}
           confirm={confirm}
         />
       )}

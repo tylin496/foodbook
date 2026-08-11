@@ -19,8 +19,6 @@ interface FoodModalProps {
   onCancel: () => void
   onDelete: () => void
   onImageUploaded: (id: string, url: string) => void
-  mergeCandidateCount: number
-  onMerge: () => void
   confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
 }
 
@@ -34,8 +32,6 @@ export function FoodModal({
   onCancel,
   onDelete,
   onImageUploaded,
-  mergeCandidateCount,
-  onMerge,
   confirm,
 }: FoodModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -555,15 +551,6 @@ export function FoodModal({
           />
         </div>
         {uploadError && <div className="upload-error">照片上傳失敗，請重試</div>}
-
-        {isEditing && mergeCandidateCount > 0 && (
-          <div className="merge-hint">
-            <span>已選取 {mergeCandidateCount} 項</span>
-            <button type="button" className="btn-ghost" onClick={onMerge}>
-              合併為子項目
-            </button>
-          </div>
-        )}
 
         <div className="sub-items-section">
           {hasSubItems ? (
