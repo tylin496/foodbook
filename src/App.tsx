@@ -11,7 +11,7 @@ import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
-import { formatItemsAsText, generateId, toNumber } from './utils'
+import { formatItemsAsText, generateId, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
 
 const GRAYSCALE_PHOTOS = false
@@ -541,23 +541,27 @@ function FoodBook({
     setEditingId(id)
     setActiveId(id)
 
-    const existingSubItems = (item.subItems ?? []).map((sub) => ({
-      id: sub.id,
-      name: sub.name,
-      weight: String(sub.weight),
-      protein: String(sub.protein),
-      calories: String(sub.calories),
-      selected: sub.selected !== false,
-      qty: String(sub.qty ?? 1),
-      ingredients: (sub.ingredients ?? []).map((ing) => ({
-        id: ing.id,
-        name: ing.name,
-        weight: String(ing.weight),
-        protein: String(ing.protein),
-        calories: String(ing.calories),
-        selected: ing.selected !== false,
+    const existingSubItems = sortBySelected(
+      (item.subItems ?? []).map((sub) => ({
+        id: sub.id,
+        name: sub.name,
+        weight: String(sub.weight),
+        protein: String(sub.protein),
+        calories: String(sub.calories),
+        selected: sub.selected !== false,
+        qty: String(sub.qty ?? 1),
+        ingredients: sortBySelected(
+          (sub.ingredients ?? []).map((ing) => ({
+            id: ing.id,
+            name: ing.name,
+            weight: String(ing.weight),
+            protein: String(ing.protein),
+            calories: String(ing.calories),
+            selected: ing.selected !== false,
+          })),
+        ),
       })),
-    }))
+    )
     // Legacy records may still carry their own base numbers alongside sub-items;
     // split them out into a row so the top fields can show a clean auto-sum.
     const hasBaseValues = item.weight > 0 || item.calories > 0 || item.protein > 0

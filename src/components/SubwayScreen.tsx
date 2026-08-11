@@ -58,6 +58,11 @@ export function SubwayScreen({ visible, closing, onClose }: SubwayScreenProps) {
           </button>
         </div>
         <iframe src={SUBWAY_CALCULATOR_URL} title="Subway Calculator" className="subway-iframe" />
+        <div className="dialog-footer subway-dialog-footer">
+          <button type="button" className="btn btn-primary" onClick={onClose}>
+            確定
+          </button>
+        </div>
       </div>
     </div>
   )

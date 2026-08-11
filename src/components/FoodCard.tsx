@@ -85,6 +85,10 @@ export function FoodCard({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetClosing, setSheetClosing] = useState(false)
   const sheetCloseTimer = useRef<number | null>(null)
+  // Tracks whether the user touched anything (qty/ingredient) while the sheet
+  // was open, so closing it can also select the card — customizing a card's
+  // contents implies you want it counted, without a separate tap on the card.
+  const sheetChangedRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -94,6 +98,9 @@ export function FoodCard({
 
   const closeSheet = () => {
     if (sheetClosing) return
+    if (sheetChangedRef.current && !selected) {
+      onToggle(item.id)
+    }
     setSheetClosing(true)
     sheetCloseTimer.current = window.setTimeout(() => {
       setSheetOpen(false)
@@ -103,6 +110,7 @@ export function FoodCard({
 
   const handleChipClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation()
+    sheetChangedRef.current = false
     setSheetOpen(true)
   }
 
@@ -381,8 +389,14 @@ export function FoodCard({
           guestIngredientOverrides={guestIngredientOverrides}
           closing={sheetClosing}
           onClose={closeSheet}
-          onSetQty={(subId, qty) => onSetSubItemQty(item.id, subId, qty)}
-          onToggleIngredient={(subId, ingredientId) => onToggleIngredient(item.id, subId, ingredientId)}
+          onSetQty={(subId, qty) => {
+            sheetChangedRef.current = true
+            onSetSubItemQty(item.id, subId, qty)
+          }}
+          onToggleIngredient={(subId, ingredientId) => {
+            sheetChangedRef.current = true
+            onToggleIngredient(item.id, subId, ingredientId)
+          }}
         />
       )}
     </div>

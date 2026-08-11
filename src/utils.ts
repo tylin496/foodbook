@@ -25,6 +25,13 @@ export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+// Keeps checked rows grouped above unchecked ones (stable otherwise) — mirrors
+// the move-to-bottom that happens live when a row gets unchecked in the edit
+// form, so a record saved with stale ordering doesn't reopen looking wrong.
+export function sortBySelected<T extends { selected?: boolean }>(items: T[]): T[] {
+  return [...items].sort((a, b) => Number(b.selected !== false) - Number(a.selected !== false))
+}
+
 export function formatItemsAsText(
   items: FoodItem[],
   overridesByItem?: Record<string, SubItemOverrides>,
