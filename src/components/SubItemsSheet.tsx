@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Minus, Plus, Trash2, X } from 'lucide-react'
 import type { FoodSubItem, SubItemOverrides } from '../types'
 import { getSubItemTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { useDialogDismiss } from '../useDialogDismiss'
+import { useFocusTrap } from '../useFocusTrap'
 
 interface SubItemsSheetProps {
   title: string
@@ -29,12 +31,21 @@ export function SubItemsSheet({
   onRemove,
 }: SubItemsSheetProps) {
   const backdropProps = useDialogDismiss(onClose)
+  const containerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(containerRef, true)
 
   return createPortal(
     <div className={`dialog-backdrop${closing ? ' is-closing' : ''}`} {...backdropProps}>
-      <div className={`dialog sub-items-sheet${closing ? ' is-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sub-items-sheet-title"
+        className={`dialog sub-items-sheet${closing ? ' is-closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="dialog-header">
-          <div className="dialog-title">{title}</div>
+          <div className="dialog-title" id="sub-items-sheet-title">{title}</div>
           <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
             <X size={20} />
           </button>

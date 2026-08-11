@@ -3,6 +3,7 @@ import { Camera, Check, GripVertical, Plus, X } from 'lucide-react'
 import type { FoodDraft, FoodIngredientDraft, FoodSubItemDraft } from '../types'
 import { uploadToCloudinary } from '../cloudinary'
 import { useDialogDismiss } from '../useDialogDismiss'
+import { useFocusTrap } from '../useFocusTrap'
 import { formatAmount, generateId, roundAmount, toNumber } from '../utils'
 
 interface FoodModalProps {
@@ -54,6 +55,8 @@ export function FoodModal({
   }, [])
 
   const backdropProps = useDialogDismiss(onCancel)
+  const containerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(containerRef, true)
 
   const handleSaveClick = () => {
     if (draft.name.trim().length === 0 || saveState === 'success') return
@@ -123,7 +126,19 @@ export function FoodModal({
     updateSubItem(id, { selected })
   }
 
+  // Mirrors the confirmation the sheet-side delete already has ([App.tsx]
+  // removeSubItem) — but only when there's real data at stake, so clearing a
+  // just-added blank row stays a single click.
   const removeSubItem = (id: string) => {
+    const target = draft.subItems.find((sub) => sub.id === id)
+    const hasContent =
+      target &&
+      (target.name.trim().length > 0 ||
+        toNumber(target.weight) > 0 ||
+        toNumber(target.calories) > 0 ||
+        toNumber(target.protein) > 0 ||
+        (target.ingredients?.length ?? 0) > 0)
+    if (hasContent && !window.confirm('確定要刪除這個子項目嗎？')) return
     onChange({ ...draft, subItems: draft.subItems.filter((sub) => sub.id !== id) })
   }
 
@@ -171,6 +186,14 @@ export function FoodModal({
   const removeIngredient = (subId: string, ingredientId: string) => {
     const sub = draft.subItems.find((s) => s.id === subId)
     if (!sub) return
+    const target = (sub.ingredients ?? []).find((ing) => ing.id === ingredientId)
+    const hasContent =
+      target &&
+      (target.name.trim().length > 0 ||
+        toNumber(target.weight) > 0 ||
+        toNumber(target.calories) > 0 ||
+        toNumber(target.protein) > 0)
+    if (hasContent && !window.confirm('確定要刪除這個成分嗎？')) return
     updateSubItem(subId, { ingredients: (sub.ingredients ?? []).filter((ing) => ing.id !== ingredientId) })
   }
 
@@ -394,19 +417,28 @@ export function FoodModal({
   return (
     <div className={`dialog-backdrop${closing ? ' is-closing' : ''}`} {...backdropProps}>
       <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="food-modal-title"
         className={`dialog${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return
           if (e.nativeEvent.isComposing) return
           const target = e.target as HTMLElement
-          if (target.tagName === 'TEXTAREA') return
+          // Only the top-level fields save-on-Enter — sub-item/ingredient rows
+          // sit in the same dialog but aren't a real <form>, so without this
+          // scoping Enter while naming a sub-item saved and closed the whole
+          // record instead of just moving on.
+          const isTopLevelField = ['food-name', 'food-calories', 'food-protein', 'food-weight'].includes(target.id)
+          if (!isTopLevelField) return
           e.preventDefault()
           handleSaveClick()
         }}
       >
         <div className="dialog-header">
-          <div className="dialog-title">{isEditing ? '編輯紀錄' : '新增紀錄'}</div>
+          <div className="dialog-title" id="food-modal-title">{isEditing ? '編輯紀錄' : '新增紀錄'}</div>
           <button type="button" className="dialog-close" aria-label="關閉" onClick={onCancel}>
             <X size={20} />
           </button>
@@ -481,11 +513,7 @@ export function FoodModal({
             onChange={handleFileChange}
           />
         </div>
-        {uploadError && (
-          <div style={{ color: 'var(--color-accent)', fontSize: 12, marginTop: -8 }}>
-            照片上傳失敗，請重試
-          </div>
-        )}
+        {uploadError && <div className="upload-error">照片上傳失敗，請重試</div>}
 
         {isEditing && mergeCandidateCount > 0 && (
           <div className="merge-hint">

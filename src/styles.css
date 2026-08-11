@@ -495,6 +495,10 @@ textarea.input { min-height: 90px; resize: vertical; }
 .subway-iframe {
   flex: 1; width: 100%; border: 0; display: block;
   border-radius: var(--radius-sm); background: #fff;
+  /* The embedded calculator is a separate, white-themed site — it can't pick
+     up Foodbook's dark theme. A visible ring keeps that white block reading
+     as an intentionally framed card instead of a dark-mode leak. */
+  box-shadow: 0 0 0 1px var(--rule);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -956,6 +960,7 @@ body { background: var(--bg); }
 }
 .photo-upload-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .photo-upload-label { font-size: 13px; color: var(--ink-2); }
+.upload-error { color: var(--color-accent); font-size: 12px; margin-top: -8px; }
 .number-fields {
   display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: var(--space-3);
 }

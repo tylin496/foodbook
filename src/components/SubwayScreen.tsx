@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import { useFocusTrap } from '../useFocusTrap'
 
 export const SUBWAY_CALCULATOR_URL = 'https://tylin496.github.io/subway-calculator/'
 
@@ -26,6 +27,8 @@ export function SubwayScreen({ visible, closing, onClose }: SubwayScreenProps) {
   // check would need the same "did the drag start here" guard the other
   // dialogs get for free from useDialogDismiss.
   const pressStartedOnBackdrop = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(containerRef, visible)
 
   const stateClass = closing ? 'is-closing' : visible ? 'is-open' : 'is-hidden'
 
@@ -40,9 +43,16 @@ export function SubwayScreen({ visible, closing, onClose }: SubwayScreenProps) {
         onClose()
       }}
     >
-      <div className={`dialog subway-dialog ${stateClass}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="subway-dialog-title"
+        className={`dialog subway-dialog ${stateClass}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="dialog-header">
-          <div className="dialog-title">Subway 計算機</div>
+          <div className="dialog-title" id="subway-dialog-title">Subway 計算機</div>
           <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
             <X size={20} />
           </button>
