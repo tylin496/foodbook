@@ -817,6 +817,10 @@ body { background: var(--bg); }
   text-align: center; color: var(--ink);
 }
 
+/* — confirm dialog — styled stand-in for window.confirm(); see useConfirm. */
+.confirm-dialog { width: min(340px, 100%); }
+.confirm-dialog .dialog-title { font-size: 16px; }
+
 /* — sub-items sheet — a chip click expands into this, listing every
    sub-item on the card at once: name, ingredients, and (owner) a quantity
    picker or (guest) an include/exclude toggle. */

@@ -4,6 +4,7 @@ import type { FoodDraft, FoodIngredientDraft, FoodSubItemDraft } from '../types'
 import { uploadToCloudinary } from '../cloudinary'
 import { useDialogDismiss } from '../useDialogDismiss'
 import { useFocusTrap } from '../useFocusTrap'
+import type { ConfirmOptions } from '../useConfirm'
 import { formatAmount, generateId, roundAmount, toNumber } from '../utils'
 
 interface FoodModalProps {
@@ -20,6 +21,7 @@ interface FoodModalProps {
   onImageUploaded: (id: string, url: string) => void
   mergeCandidateCount: number
   onMerge: () => void
+  confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
 }
 
 export function FoodModal({
@@ -34,6 +36,7 @@ export function FoodModal({
   onImageUploaded,
   mergeCandidateCount,
   onMerge,
+  confirm,
 }: FoodModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(draft.imageUrl)
@@ -143,7 +146,7 @@ export function FoodModal({
   // Mirrors the confirmation the sheet-side delete already has ([App.tsx]
   // removeSubItem) — but only when there's real data at stake, so clearing a
   // just-added blank row stays a single click.
-  const removeSubItem = (id: string) => {
+  const removeSubItem = async (id: string) => {
     const target = draft.subItems.find((sub) => sub.id === id)
     const hasContent =
       target &&
@@ -152,7 +155,7 @@ export function FoodModal({
         toNumber(target.calories) > 0 ||
         toNumber(target.protein) > 0 ||
         (target.ingredients?.length ?? 0) > 0)
-    if (hasContent && !window.confirm('確定要刪除這個子項目嗎？')) return
+    if (hasContent && !(await confirm('確定要刪除這個子項目嗎？'))) return
     onChange({ ...draft, subItems: draft.subItems.filter((sub) => sub.id !== id) })
   }
 
@@ -197,7 +200,7 @@ export function FoodModal({
     })
   }
 
-  const removeIngredient = (subId: string, ingredientId: string) => {
+  const removeIngredient = async (subId: string, ingredientId: string) => {
     const sub = draft.subItems.find((s) => s.id === subId)
     if (!sub) return
     const target = (sub.ingredients ?? []).find((ing) => ing.id === ingredientId)
@@ -207,7 +210,7 @@ export function FoodModal({
         toNumber(target.weight) > 0 ||
         toNumber(target.calories) > 0 ||
         toNumber(target.protein) > 0)
-    if (hasContent && !window.confirm('確定要刪除這個成分嗎？')) return
+    if (hasContent && !(await confirm('確定要刪除這個成分嗎？'))) return
     updateSubItem(subId, { ingredients: (sub.ingredients ?? []).filter((ing) => ing.id !== ingredientId) })
   }
 

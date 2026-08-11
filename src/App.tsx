@@ -9,8 +9,10 @@ import { emptyDraft, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
 import { formatItemsAsText, generateId, toNumber } from './utils'
+import { useConfirm } from './useConfirm'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
@@ -59,6 +61,7 @@ function FoodBook({
 }) {
   const [items, setItems, itemsLoading] = useCloudItems(OWNER_UID)
   const { overrides: guestOverrides, toggle: toggleGuestSubItem } = useGuestOverrides()
+  const { confirm, confirmDialogProps } = useConfirm()
   useTheme()
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -444,17 +447,15 @@ function FoodBook({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [filteredItems, modalOpen, selectedItems])
 
-  const mergeIntoItem = (baseId: string, mergeIds: string[]) => {
+  const mergeIntoItem = async (baseId: string, mergeIds: string[]) => {
     if (!isOwner || mergeIds.length === 0) return
     const base = items.find((item) => item.id === baseId)
     if (!base) return
     const mergeItems = items.filter((item) => mergeIds.includes(item.id))
-    if (
-      !window.confirm(
-        `確定要將這 ${mergeItems.length} 項合併進「${base.name}」嗎？合併後個別項目將消失，但數值會保留為子項目。`,
-      )
-    )
-      return
+    const ok = await confirm(`確定要將這 ${mergeItems.length} 項合併進「${base.name}」嗎？`, {
+      description: '合併後個別項目將消失，但數值會保留為子項目。',
+    })
+    if (!ok) return
 
     const mergedSubItems = [
       ...(base.subItems ?? []),
@@ -594,9 +595,9 @@ function FoodBook({
 
   // Sub-items are only ever created via the edit modal — this sheet-side
   // action can only remove one, never add.
-  const removeSubItem = (id: string, subId: string) => {
+  const removeSubItem = async (id: string, subId: string) => {
     if (!isOwner) return
-    if (!window.confirm('確定要刪除這個子項目嗎？')) return
+    if (!(await confirm('確定要刪除這個子項目嗎？'))) return
     setItems((prev) =>
       prev.map((item) =>
         item.id !== id ? item : { ...item, subItems: (item.subItems ?? []).filter((sub) => sub.id !== subId) },
@@ -676,9 +677,9 @@ function FoodBook({
     return result.ok
   }
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async (id: string) => {
     if (!isOwner) return
-    if (!window.confirm('確定要刪除這筆紀錄嗎？')) return
+    if (!(await confirm('確定要刪除這筆紀錄嗎？'))) return
     if (editingId === id) closeModal()
     if (removingIds.has(id)) return
     setRemovingIds((prev) => new Set(prev).add(id))
@@ -761,8 +762,8 @@ function FoodBook({
                     type="button"
                     className="avatar-btn"
                     title={`登出 ${userLabel}`}
-                    onClick={() => {
-                      if (window.confirm(`確定要登出 ${userLabel} 嗎？`)) onLogOut()
+                    onClick={async () => {
+                      if (await confirm(`確定要登出 ${userLabel} 嗎？`)) onLogOut()
                     }}
                   >
                     {photoURL ? (
@@ -851,12 +852,15 @@ function FoodBook({
           onImageUploaded={handleImageUploaded}
           mergeCandidateCount={mergeCandidateIds.length}
           onMerge={() => editingId && mergeIntoItem(editingId, mergeCandidateIds)}
+          confirm={confirm}
         />
       )}
 
       {subwayMounted && (
         <SubwayScreen visible={subwayOpen} closing={subwayClosing} onClose={closeSubway} />
       )}
+
+      {confirmDialogProps && <ConfirmDialog {...confirmDialogProps} />}
     </>
   )
 }
