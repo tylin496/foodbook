@@ -416,6 +416,10 @@ textarea.input { min-height: 90px; resize: vertical; }
   padding: 0 10px; height: 30px; border-radius: var(--radius-sm);
   background: var(--bg-soft); color: var(--ink-3);
 }
+/* The input's own outline is suppressed below (it doesn't share the pill's
+   rounding), so the ring goes on the pill itself via :focus-within instead —
+   otherwise focusing the input by keyboard left no visible indicator at all. */
+.search-bar:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .search-bar svg { flex: none; }
 .search-bar input {
   flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
@@ -708,9 +712,10 @@ body { background: var(--bg); }
 }
 .food-card .calculator-badge {
   flex: none;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 17px; height: 17px;
-  border-radius: 5px;
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 17px; padding: 0 6px 0 5px;
+  border-radius: 999px;
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: .01em;
   background: color-mix(in srgb, var(--chip-ink) 16%, transparent);
   color: var(--chip-ink);
 }
@@ -860,6 +865,7 @@ body { background: var(--bg); }
   padding: 6px 10px; border-radius: var(--radius-sm);
   white-space: nowrap;
 }
+.sub-item-detail-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .sub-item-detail-toggle.is-excluded {
   color: var(--ink-2); background: transparent;
   box-shadow: inset 0 0 0 1px var(--off-ring);

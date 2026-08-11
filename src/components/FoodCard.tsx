@@ -304,6 +304,7 @@ export function FoodCard({
           {isCalculatorLink && (
             <span className="calculator-badge" title="點擊開啟計算機">
               <Calculator size={11} strokeWidth={2.3} />
+              計算機
             </span>
           )}
         </div>
