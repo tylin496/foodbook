@@ -24,6 +24,7 @@ const SUBWAY_CLOSE_MS = 220
 const SUBWAY_ORIGIN = new URL(SUBWAY_CALCULATOR_URL).origin
 
 type SubwayResult = { hasSelection: boolean; mainName?: string; kcal?: number; protein?: number }
+type SortMode = 'manual' | 'calories' | 'protein'
 
 export default function App() {
   const { user, loading: authLoading, signIn, logOut, signInError } = useAuth()
@@ -190,7 +191,24 @@ function FoodBook({
     })
   }, [displayItems, search])
 
-  const reorderEnabled = isOwner && search.trim().length === 0
+  const [sortMode, setSortMode] = useState<SortMode>('manual')
+
+  // Manual is the stored/drag order as-is; the other modes rank by each
+  // item's own totals (protein efficiency = protein per kcal, so a lean,
+  // high-protein food ranks above a calorie-dense one).
+  const sortedItems = useMemo(() => {
+    if (sortMode === 'manual') return filteredItems
+    const ranked = filteredItems.map((item) => ({ item, totals: getFoodTotals(item) }))
+    ranked.sort((a, b) => {
+      if (sortMode === 'calories') return b.totals.calories - a.totals.calories
+      const effA = a.totals.calories > 0 ? a.totals.protein / a.totals.calories : 0
+      const effB = b.totals.calories > 0 ? b.totals.protein / b.totals.calories : 0
+      return effB - effA
+    })
+    return ranked.map(({ item }) => item)
+  }, [filteredItems, sortMode])
+
+  const reorderEnabled = isOwner && search.trim().length === 0 && sortMode === 'manual'
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [modalClosing, setModalClosing] = useState(false)
@@ -832,6 +850,32 @@ function FoodBook({
             </div>
           </header>
 
+          {hasAnyItems && (
+            <div className="sort-bar">
+              <button
+                type="button"
+                className={`sort-pill${sortMode === 'manual' ? ' is-active' : ''}`}
+                onClick={() => setSortMode('manual')}
+              >
+                手動
+              </button>
+              <button
+                type="button"
+                className={`sort-pill${sortMode === 'calories' ? ' is-active' : ''}`}
+                onClick={() => setSortMode('calories')}
+              >
+                熱量
+              </button>
+              <button
+                type="button"
+                className={`sort-pill${sortMode === 'protein' ? ' is-active' : ''}`}
+                onClick={() => setSortMode('protein')}
+              >
+                蛋白質效率
+              </button>
+            </div>
+          )}
+
           {itemsLoading && !hasAnyItems && <div className="no-results">同步中…</div>}
           {!itemsLoading && !hasAnyItems && (
             <div className="empty-state">
@@ -853,7 +897,7 @@ function FoodBook({
 
           {hasAnyItems && hasResults && (
             <div className="food-grid" ref={foodGridRef}>
-              {filteredItems.map((item) => (
+              {sortedItems.map((item) => (
                 <FoodCard
                   key={item.id}
                   item={item}
