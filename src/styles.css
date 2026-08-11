@@ -474,49 +474,28 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
-/* — subway screen — an embedded same-origin calculator, presented as an
-   in-app screen rather than a link: Foodbook draws its own back button over
-   a borderless full-bleed iframe, so nothing about the transition reads as
-   "left the site". */
-.subway-screen {
-  position: fixed; inset: 0; z-index: 500;
-  background: #000;
-}
-/* Pre-mounted but not yet opened (or closed again) — kept in the DOM so the
-   iframe stays loaded/alive, just invisible and non-interactive. */
-.subway-screen.is-hidden {
+/* — subway dialog — an embedded same-origin calculator, presented in the same
+   dialog-backdrop/dialog frame as the other modals (not a full-bleed takeover),
+   so it reads as part of Foodbook rather than a page navigation. Stays mounted
+   while hidden (see SubwayScreen.tsx) so the iframe keeps its state between
+   visits, so unlike the other dialogs its entrance/exit animation is driven by
+   an explicit state class rather than mount/unmount. */
+.subway-backdrop.is-hidden {
   visibility: hidden; pointer-events: none;
 }
-.subway-screen.is-open {
-  animation: subway-in 360ms var(--motion-entrance-bold);
+.subway-backdrop.is-open { animation: backdrop-in 200ms ease; }
+.subway-backdrop.is-closing { animation: backdrop-out 180ms ease forwards; }
+.subway-dialog {
+  width: min(480px, 100%); height: min(680px, 100%);
+  padding: var(--space-4); overflow: hidden;
 }
-.subway-screen.is-closing {
-  animation: subway-out 220ms ease forwards;
-}
-@keyframes subway-in {
-  from { opacity: 0; transform: translateY(24px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes subway-out {
-  from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(24px) scale(0.98); }
-}
+.subway-dialog .dialog-header { flex: none; margin-bottom: var(--space-3); }
+.subway-dialog.is-open { animation: dialog-in 480ms var(--motion-entrance-bold); }
+.subway-dialog.is-closing { animation: dialog-out 180ms ease forwards; }
 .subway-iframe {
-  width: 100%; height: 100%; border: 0; display: block;
+  flex: 1; width: 100%; border: 0; display: block;
+  border-radius: var(--radius-sm); background: #fff;
 }
-.subway-back-btn {
-  position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; z-index: 1;
-  display: flex; align-items: center; gap: 2px;
-  padding: 8px 14px 8px 8px; border-radius: var(--radius-pill);
-  background: rgba(28, 28, 30, .72);
-  backdrop-filter: saturate(180%) blur(18px);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  border: 1px solid rgba(255, 255, 255, .12);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .28);
-  color: #fff; font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-  cursor: pointer;
-}
-.subway-back-btn:active { transform: scale(0.96); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    App-specific layout — food grid app (not part of the base design system)
