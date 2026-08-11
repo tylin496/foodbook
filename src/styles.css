@@ -128,8 +128,8 @@
 }
 
 /* Dark theme — same tokens, tuned for a dark ground. Applied via
-   [data-theme="dark"] on <html>, set in useTheme.ts (defaults to the
-   OS preference, overridable and persisted per-user). */
+   [data-theme="dark"] on <html>, set in useTheme.ts — follows OS preference
+   live (no manual override or persistence exists yet). */
 :root[data-theme='dark'] {
   --bg: #1a1a1a;
   --bg-card: rgba(30, 30, 33, .86);
