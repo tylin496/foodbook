@@ -113,7 +113,7 @@ export function SubItemsSheet({
                 )}
 
                 <div className="sub-items-sheet-row-stats">
-                  {formatAmount(totals.calories)} kcal {formatAmount(totals.protein)} g 蛋白 {formatAmount(totals.weight)} g
+                  {formatAmount(totals.calories)} kcal {formatAmount(totals.protein)} g 蛋白
                 </div>
               </div>
             )
