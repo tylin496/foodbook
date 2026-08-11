@@ -1055,6 +1055,7 @@ body { background: var(--bg); }
 .sub-item-row-top .input { flex: 1; }
 .sub-item-checkbox { flex: none; width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-accent); }
 .sub-item-grip {
+  position: relative;
   flex: none; width: 20px; height: 30px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; touch-action: none;
@@ -1063,12 +1064,20 @@ body { background: var(--bg); }
 .sub-item-grip:hover { color: var(--color-accent); }
 .sub-item-row.is-dragging .sub-item-grip { cursor: grabbing; color: var(--color-accent); }
 .sub-item-remove {
+  position: relative;
   flex: none; width: 30px; height: 30px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: 1px solid var(--color-divider);
   color: var(--color-text); cursor: pointer;
 }
 .sub-item-remove:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); border-color: var(--color-accent); color: var(--color-accent); }
+/* Rows pack grip/checkbox/input/qty/remove tightly (6px gaps) — an
+   ::before this small only closes the dead zone between neighbours
+   without reaching into their own tap targets. */
+.sub-item-grip::before,
+.sub-item-remove::before {
+  content: ''; position: absolute; inset: -3px;
+}
 .sub-item-row-numbers {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
 }
@@ -1108,9 +1117,13 @@ body { background: var(--bg); }
 .ingredient-row-numbers .input { font-size: 12px; }
 
 .dialog-close {
+  position: relative;
   background: transparent; border: none; cursor: pointer;
   color: var(--color-text); padding: 4px;
   display: flex; align-items: center; justify-content: center;
+}
+.dialog-close::before {
+  content: ''; position: absolute; inset: -8px;
 }
 .dialog-header {
   display: flex; align-items: center; justify-content: space-between;
