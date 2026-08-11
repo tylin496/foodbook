@@ -1,16 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Camera, Check, Pencil } from 'lucide-react'
-import type { FoodItem, FoodSubItem, SubItemOverrides } from '../types'
+import { Calculator, Camera, Check, Pencil } from 'lucide-react'
+import type { FoodItem, SubItemOverrides } from '../types'
 import { getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
-import { SubItemDetailSheet } from './SubItemDetailSheet'
+import { SubItemsSheet } from './SubItemsSheet'
 
 const DETAIL_CLOSE_MS = 180
 
 const LONG_PRESS_MS = 450
 const LONG_PRESS_MOVE_TOLERANCE = 10
-const OVERFLOW_MENU_WIDTH = 180
 
 interface FoodCardProps {
   item: FoodItem
@@ -20,6 +18,10 @@ interface FoodCardProps {
   reorderEnabled: boolean
   dragging: boolean
   removing: boolean
+  // Marks the one card whose tap opens an external calculator instead of
+  // toggling selection, so it can carry a visual cue distinguishing it from
+  // every other card.
+  isCalculatorLink: boolean
   onToggle: (id: string) => void
   onEdit: (id: string) => void
   onToggleSubItem: (id: string, subId: string) => void
@@ -36,6 +38,7 @@ export function FoodCard({
   reorderEnabled,
   dragging,
   removing,
+  isCalculatorLink,
   onToggle,
   onEdit,
   onToggleSubItem,
@@ -74,63 +77,32 @@ export function FoodCard({
   const chipMeasureRef = useRef<HTMLDivElement | null>(null)
   const [visibleChipCount, setVisibleChipCount] = useState(subItems.length)
 
-  // The "+N" chip opens a small popover listing the sub-items that didn't fit,
-  // so they stay toggleable instead of being stranded off-screen.
-  const moreChipRef = useRef<HTMLSpanElement | null>(null)
-  const overflowMenuRef = useRef<HTMLDivElement | null>(null)
-  const [overflowMenuPos, setOverflowMenuPos] = useState<{ top: number; left: number } | null>(null)
-
-  useEffect(() => {
-    if (!overflowMenuPos) return
-    const close = () => setOverflowMenuPos(null)
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node
-      if (overflowMenuRef.current?.contains(target) || moreChipRef.current?.contains(target)) return
-      close()
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
-    }
-  }, [overflowMenuPos])
-
-  // A chip click expands into a full detail sheet — name, stats, ingredients,
-  // and (owner only) a quantity picker — instead of toggling inline.
-  const [detailSubId, setDetailSubId] = useState<string | null>(null)
-  const [detailClosing, setDetailClosing] = useState(false)
-  const detailCloseTimer = useRef<number | null>(null)
+  // Any chip (including "+N") opens the same sheet listing every sub-item on
+  // the card — full stats, ingredients, and (owner only) a quantity picker —
+  // instead of toggling that one chip inline.
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheetClosing, setSheetClosing] = useState(false)
+  const sheetCloseTimer = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
-      if (detailCloseTimer.current !== null) window.clearTimeout(detailCloseTimer.current)
+      if (sheetCloseTimer.current !== null) window.clearTimeout(sheetCloseTimer.current)
     }
   }, [])
 
-  const closeDetail = () => {
-    if (detailClosing) return
-    setDetailClosing(true)
-    detailCloseTimer.current = window.setTimeout(() => {
-      setDetailSubId(null)
-      setDetailClosing(false)
+  const closeSheet = () => {
+    if (sheetClosing) return
+    setSheetClosing(true)
+    sheetCloseTimer.current = window.setTimeout(() => {
+      setSheetOpen(false)
+      setSheetClosing(false)
     }, DETAIL_CLOSE_MS)
   }
 
-  const handleChipClick = (e: React.MouseEvent<HTMLElement>, sub: FoodSubItem) => {
+  const handleChipClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation()
-    setOverflowMenuPos(null)
-    setDetailSubId(sub.id)
+    setSheetOpen(true)
   }
-
-  const detailSub = detailSubId ? subItems.find((s) => s.id === detailSubId) : undefined
 
   useLayoutEffect(() => {
     if (subItems.length === 0) return
@@ -200,10 +172,15 @@ export function FoodCard({
   }
 
   const handlePhotoPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
     stopMomentum()
     lastPointerType.current = e.pointerType
     suppressClick.current = false
     if (!reorderEnabled) return
+    // Capture so pointermove/pointerup keep targeting this card even if the
+    // cursor leaves the viewport mid-drag — without this a fast release
+    // outside the window never fires pointerup and the drag sticks.
+    e.currentTarget.setPointerCapture(e.pointerId)
     pointerStart.current = { x: e.clientX, y: e.clientY }
     lastPointerY.current = e.clientY
     setHolding(true)
@@ -320,7 +297,14 @@ export function FoodCard({
         )}
       </div>
       <div className="card-body">
-        <div className="food-name">{item.name}</div>
+        <div className="food-name-line">
+          <div className="food-name">{item.name}</div>
+          {isCalculatorLink && (
+            <span className="calculator-badge" title="點擊開啟計算機">
+              <Calculator size={11} strokeWidth={2.3} />
+            </span>
+          )}
+        </div>
         {weightAsSubItem && (
           <div className="sub-items-summary">
             <span className="sub-item-chip">{formatAmount(item.weight)} g</span>
@@ -332,23 +316,13 @@ export function FoodCard({
               <span
                 key={sub.id}
                 className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'} is-toggleable`}
-                onClick={(e) => handleChipClick(e, sub)}
+                onClick={handleChipClick}
               >
                 {formatSubItemName(sub)}
               </span>
             ))}
             {subItems.length > visibleChipCount && (
-              <span
-                ref={moreChipRef}
-                className="sub-item-chip is-more"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  let left = rect.right - OVERFLOW_MENU_WIDTH
-                  left = Math.min(Math.max(8, left), window.innerWidth - OVERFLOW_MENU_WIDTH - 8)
-                  setOverflowMenuPos((pos) => (pos ? null : { top: rect.bottom + 6, left }))
-                }}
-              >
+              <span className="sub-item-chip is-more" onClick={handleChipClick}>
                 +{subItems.length - visibleChipCount}
               </span>
             )}
@@ -395,36 +369,16 @@ export function FoodCard({
           </div>
         </div>
       </div>
-      {overflowMenuPos &&
-        createPortal(
-          <div
-            ref={overflowMenuRef}
-            className="sub-item-overflow-menu"
-            style={{ top: overflowMenuPos.top, left: overflowMenuPos.left, width: OVERFLOW_MENU_WIDTH }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {subItems.slice(visibleChipCount).map((sub) => (
-              <button
-                key={sub.id}
-                type="button"
-                className={`sub-item-overflow-row${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
-                onClick={(e) => handleChipClick(e, sub)}
-              >
-                {formatSubItemName(sub)}
-              </button>
-            ))}
-          </div>,
-          document.body,
-        )}
-      {detailSub && (
-        <SubItemDetailSheet
-          sub={detailSub}
+      {sheetOpen && (
+        <SubItemsSheet
+          title={item.name}
+          subItems={subItems}
           readOnly={readOnly}
           guestOverrides={guestOverrides}
-          closing={detailClosing}
-          onClose={closeDetail}
-          onToggle={() => onToggleSubItem(item.id, detailSub.id)}
-          onSetQty={(qty) => onSetSubItemQty(item.id, detailSub.id, qty)}
+          closing={sheetClosing}
+          onClose={closeSheet}
+          onToggle={(subId) => onToggleSubItem(item.id, subId)}
+          onSetQty={(subId, qty) => onSetSubItemQty(item.id, subId, qty)}
         />
       )}
     </div>

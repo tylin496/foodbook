@@ -304,6 +304,7 @@ function FoodBook({
     setDraggingId(null)
     window.removeEventListener('pointermove', handlePointerMove)
     window.removeEventListener('pointerup', handlePointerUp)
+    window.removeEventListener('pointercancel', handlePointerUp)
   }, [findCardEl, stopSpringLoop])
 
   const handleDragHandlePointerDown = (id: string, e: React.PointerEvent) => {
@@ -332,12 +333,14 @@ function FoodBook({
     }, 140)
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
   }
 
   useEffect(() => {
     return () => {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
       stopSpringLoop()
     }
   }, [handlePointerMove, handlePointerUp, stopSpringLoop])
@@ -401,6 +404,20 @@ function FoodBook({
       if (e.key === '/' && !isEditable && !(e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         searchInputRef.current?.focus()
+        return
+      }
+
+      // Dialogs (edit modal, sub-items sheet) own Esc for their own dismissal
+      // via useDialogDismiss — bail so this doesn't also wipe the selection.
+      if (
+        e.key === 'Escape' &&
+        !isEditable &&
+        !modalOpen &&
+        !document.querySelector('.dialog-backdrop')
+      ) {
+        if (selectedItems.length === 0) return
+        e.preventDefault()
+        clearSelection()
         return
       }
 
@@ -754,6 +771,7 @@ function FoodBook({
                   reorderEnabled={reorderEnabled}
                   dragging={draggingId === item.id}
                   removing={removingIds.has(item.id)}
+                  isCalculatorLink={item.name === SUBWAY_ITEM_NAME}
                   onToggle={handleCardToggle}
                   onEdit={openEditModal}
                   onToggleSubItem={handleToggleSubItem}
