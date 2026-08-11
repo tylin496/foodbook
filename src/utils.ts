@@ -45,22 +45,16 @@ export function formatItemsAsText(
     const totals = getFoodTotals(item, overrides, ingredientOverrides)
 
     lines.push(item.name)
-    lines.push(`   重量 ${formatAmount(totals.weight)}g`)
-    lines.push(
-      `   熱量 ${formatAmount(totals.calories)}kcal / 蛋白質 ${formatAmount(totals.protein)}g`,
-    )
+    lines.push(`   ${formatAmount(totals.weight)}g`)
+    lines.push(`   ${formatAmount(totals.calories)}kcal / ${formatAmount(totals.protein)}g`)
     for (const sub of item.subItems ?? []) {
       const subTotals = getSubItemTotals(sub)
       const qty = sub.qty ?? 1
-      lines.push(`   - ${formatSubItemName(sub)}：重量 ${formatAmount(subTotals.weight)}g`)
-      lines.push(
-        `     熱量 ${formatAmount(subTotals.calories)}kcal / 蛋白質 ${formatAmount(subTotals.protein)}g`,
-      )
+      lines.push(`   - ${formatSubItemName(sub)}：${formatAmount(subTotals.weight)}g`)
+      lines.push(`     ${formatAmount(subTotals.calories)}kcal / ${formatAmount(subTotals.protein)}g`)
       for (const ing of sub.ingredients ?? []) {
-        lines.push(`     · ${ing.name}：重量 ${formatAmount(ing.weight * qty)}g`)
-        lines.push(
-          `       熱量 ${formatAmount(ing.calories * qty)}kcal / 蛋白質 ${formatAmount(ing.protein * qty)}g`,
-        )
+        lines.push(`     · ${ing.name}：${formatAmount(ing.weight * qty)}g`)
+        lines.push(`       ${formatAmount(ing.calories * qty)}kcal / ${formatAmount(ing.protein * qty)}g`)
       }
     }
   })

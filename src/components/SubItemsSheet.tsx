@@ -33,6 +33,7 @@ export function SubItemsSheet({
   useFocusTrap(containerRef, true)
 
   const rows = subItems.map((sub) => ({ sub, activeQty: getEffectiveSubItemQty(sub, guestOverrides) }))
+  const selectedCount = rows.filter(({ activeQty }) => activeQty > 0).length
   const sortedRows = [...rows].sort((a, b) => Number(b.activeQty > 0) - Number(a.activeQty > 0))
 
   return createPortal(
@@ -55,8 +56,13 @@ export function SubItemsSheet({
         <div className="sub-items-sheet-list">
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
+            const isLastSelected = selected && selectedCount <= 1
             const totals = getSubItemTotals(sub, activeQty, guestIngredientOverrides)
-            const ingredients = sub.ingredients ?? []
+            const ingredients = [...(sub.ingredients ?? [])].sort(
+              (a, b) =>
+                Number(isIngredientSelected(b, guestIngredientOverrides)) -
+                Number(isIngredientSelected(a, guestIngredientOverrides)),
+            )
 
             return (
               <div key={sub.id} className={`sub-items-sheet-row${selected ? '' : ' is-excluded'}`}>
@@ -64,6 +70,7 @@ export function SubItemsSheet({
                   <button
                     type="button"
                     className="sub-items-sheet-row-name"
+                    disabled={isLastSelected}
                     onClick={() => onSetQty(sub.id, activeQty > 0 ? 0 : 1)}
                   >
                     {formatSubItemName(sub)}
@@ -72,7 +79,7 @@ export function SubItemsSheet({
                     <button
                       type="button"
                       aria-label="減少數量"
-                      disabled={activeQty <= 0}
+                      disabled={activeQty <= 0 || isLastSelected}
                       onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
                     >
                       <Minus size={13} />

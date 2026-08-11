@@ -5,7 +5,7 @@ import { useTheme } from './useTheme'
 import { useCloudItems } from './useCloudItems'
 import { useGuestOverrides } from './useGuestOverrides'
 import type { FoodDraft } from './types'
-import { emptyDraft, getFoodTotals } from './types'
+import { emptyDraft, getEffectiveSubItemQty, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
@@ -614,7 +614,19 @@ function FoodBook({
 
   // Owner edits write straight to the shared record; guests can't write there,
   // so their qty changes flip a local-only override instead (see useGuestOverrides).
+  //
+  // Dropping to 0 sub-items selected would leave the whole item hidden (zero
+  // totals — see getFoodTotals), so block whichever change would do that,
+  // same invariant FoodModal enforces for its own edit path.
   const handleSetSubItemQty = (id: string, subId: string, qty: number) => {
+    if (qty <= 0) {
+      const subItems = items.find((item) => item.id === id)?.subItems ?? []
+      const overrides = isOwner ? undefined : guestOverrides[id]
+      const stillSelected = subItems.some(
+        (sub) => sub.id !== subId && getEffectiveSubItemQty(sub, overrides) > 0,
+      )
+      if (subItems.length > 0 && !stillSelected) return
+    }
     if (isOwner) {
       setSubItemQty(id, subId, qty)
       return
