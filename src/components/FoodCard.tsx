@@ -288,6 +288,7 @@ export function FoodCard({
             <button
               type="button"
               aria-label="編輯"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(item.id)
