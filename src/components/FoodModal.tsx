@@ -471,6 +471,7 @@ export function FoodModal({
               className="input"
               type="number"
               inputMode="decimal"
+              min="0"
               value={hasSubItems ? totalCalories : draft.calories}
               disabled={hasSubItems}
               onChange={(e) => onChange({ ...draft, calories: e.target.value })}
@@ -484,6 +485,7 @@ export function FoodModal({
               className="input"
               type="number"
               inputMode="decimal"
+              min="0"
               value={hasSubItems ? totalProtein : draft.protein}
               disabled={hasSubItems}
               onChange={(e) => onChange({ ...draft, protein: e.target.value })}
@@ -497,6 +499,7 @@ export function FoodModal({
               className="input"
               type="number"
               inputMode="decimal"
+              min="0"
               value={hasSubItems ? totalWeight : draft.weight}
               disabled={hasSubItems}
               onChange={(e) => onChange({ ...draft, weight: e.target.value })}
@@ -609,6 +612,7 @@ export function FoodModal({
                         className="input"
                         type="number"
                         inputMode="decimal"
+                        min="0"
                         value={subTotals.hasIngredients ? subTotals.weight : sub.weight}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { weight: e.target.value })}
@@ -618,6 +622,7 @@ export function FoodModal({
                         className="input"
                         type="number"
                         inputMode="decimal"
+                        min="0"
                         value={subTotals.hasIngredients ? subTotals.calories : sub.calories}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { calories: e.target.value })}
@@ -627,6 +632,7 @@ export function FoodModal({
                         className="input"
                         type="number"
                         inputMode="decimal"
+                        min="0"
                         value={subTotals.hasIngredients ? subTotals.protein : sub.protein}
                         disabled={subTotals.hasIngredients}
                         onChange={(e) => updateSubItem(sub.id, { protein: e.target.value })}
@@ -677,6 +683,7 @@ export function FoodModal({
                                   className="input"
                                   type="number"
                                   inputMode="decimal"
+                                  min="0"
                                   value={ing.weight}
                                   onChange={(e) => updateIngredient(sub.id, ing.id, { weight: e.target.value })}
                                   placeholder="重量 (g)"
@@ -685,6 +692,7 @@ export function FoodModal({
                                   className="input"
                                   type="number"
                                   inputMode="decimal"
+                                  min="0"
                                   value={ing.calories}
                                   onChange={(e) => updateIngredient(sub.id, ing.id, { calories: e.target.value })}
                                   placeholder="熱量 (kcal)"
@@ -693,6 +701,7 @@ export function FoodModal({
                                   className="input"
                                   type="number"
                                   inputMode="decimal"
+                                  min="0"
                                   value={ing.protein}
                                   onChange={(e) => updateIngredient(sub.id, ing.id, { protein: e.target.value })}
                                   placeholder="蛋白質 (g)"
