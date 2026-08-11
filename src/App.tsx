@@ -423,13 +423,12 @@ function FoodBook({
   }
 
   const handleCardToggle = (id: string) => {
-    const item = items.find((i) => i.id === id)
-    if (item?.name === SUBWAY_ITEM_NAME) {
-      setSubwayMounted(true)
-      setSubwayOpen(true)
-      return
-    }
     toggleSelect(id)
+  }
+
+  const openSubwayCalculator = () => {
+    setSubwayMounted(true)
+    setSubwayOpen(true)
   }
 
   const clearSelection = () => setSelectedIds(new Set())
@@ -450,21 +449,20 @@ function FoodBook({
         (target.tagName === 'INPUT' ||
           target.tagName === 'TEXTAREA' ||
           target.isContentEditable)
+      // Any open dialog (edit modal, sub-items sheet, Subway calculator) owns
+      // the keyboard — checked generically instead of via `modalOpen` alone
+      // so it also covers dialogs App.tsx doesn't itself track the state of.
+      const isDialogOpen = () => !!document.querySelector('.dialog-backdrop:not(.is-hidden)')
 
-      if (e.key === '/' && !isEditable && !(e.metaKey || e.ctrlKey)) {
+      if (e.key === '/' && !isEditable && !(e.metaKey || e.ctrlKey) && !isDialogOpen()) {
         e.preventDefault()
         searchInputRef.current?.focus()
         return
       }
 
-      // Dialogs (edit modal, sub-items sheet) own Esc for their own dismissal
-      // via useDialogDismiss — bail so this doesn't also wipe the selection.
-      if (
-        e.key === 'Escape' &&
-        !isEditable &&
-        !modalOpen &&
-        !document.querySelector('.dialog-backdrop')
-      ) {
+      // Dialogs own Esc for their own dismissal via useDialogDismiss — bail
+      // so this doesn't also wipe the selection.
+      if (e.key === 'Escape' && !isEditable && !isDialogOpen()) {
         if (selectedItems.length === 0) return
         e.preventDefault()
         clearSelection()
@@ -476,7 +474,7 @@ function FoodBook({
       const isDeselect = e.key === 'd' || e.key === 'D'
       const isCopy = e.key === 'c' || e.key === 'C'
       if (!isSelectAll && !isDeselect && !isCopy) return
-      if (isEditable || modalOpen) return
+      if (isEditable || isDialogOpen()) return
       if (isCopy) {
         if (selectedItems.length === 0) return
         e.preventDefault()
@@ -489,7 +487,7 @@ function FoodBook({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [filteredItems, modalOpen, selectedItems])
+  }, [filteredItems, selectedItems])
 
   const openAddModal = () => {
     if (!isOwner) return
@@ -734,11 +732,6 @@ function FoodBook({
             <div className="title-row">
               <h1>Foodbook</h1>
               <span className="item-count">{items.length} 筆</span>
-              {!isOwner && (
-                <span className="guest-badge" title="子項目的勾選只會存在你的裝置上，不會同步給其他人或寫入原始紀錄">
-                  檢視模式
-                </span>
-              )}
             </div>
 
             <div className="search-bar">
@@ -836,6 +829,7 @@ function FoodBook({
                   removing={removingIds.has(item.id)}
                   isCalculatorLink={item.name === SUBWAY_ITEM_NAME}
                   onToggle={handleCardToggle}
+                  onOpenCalculator={openSubwayCalculator}
                   onEdit={openEditModal}
                   onSetSubItemQty={handleSetSubItemQty}
                   onToggleIngredient={handleToggleIngredient}

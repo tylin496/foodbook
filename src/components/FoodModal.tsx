@@ -133,6 +133,13 @@ export function FoodModal({
       const target = draft.subItems.find((sub) => sub.id === id)
       if (!target) return
       const rest = draft.subItems.filter((sub) => sub.id !== id)
+      // Unchecking the last active row would leave the whole item hidden
+      // (zero totals) — force the new top row active instead of allowing that.
+      if (rest.length > 0 && !rest.some((sub) => sub.selected)) {
+        const [first, ...others] = rest
+        onChange({ ...draft, subItems: [{ ...first, selected: true }, ...others, { ...target, selected }] })
+        return
+      }
       onChange({ ...draft, subItems: [...rest, { ...target, selected }] })
       return
     }

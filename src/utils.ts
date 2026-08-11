@@ -39,12 +39,12 @@ export function formatItemsAsText(
 ): string {
   const lines: string[] = []
 
-  items.forEach((item, index) => {
+  items.forEach((item) => {
     const overrides = overridesByItem?.[item.id]
     const ingredientOverrides = ingredientOverridesByItem?.[item.id]
     const totals = getFoodTotals(item, overrides, ingredientOverrides)
 
-    lines.push(`${index + 1}. ${item.name}`)
+    lines.push(item.name)
     lines.push(`   重量 ${formatAmount(totals.weight)}g`)
     lines.push(
       `   熱量 ${formatAmount(totals.calories)}kcal / 蛋白質 ${formatAmount(totals.protein)}g`,

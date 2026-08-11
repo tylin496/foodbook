@@ -279,7 +279,7 @@ figcaption {
 .btn-secondary { border-color: var(--color-divider); }
 .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
-.btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.btn-ghost { background: transparent; border: none; border-radius: var(--radius-sm); color: var(--color-accent); padding-inline: var(--space-1); }
 .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 .btn-icon { width: 36px; height: 36px; padding: 0; }
@@ -377,11 +377,6 @@ textarea.input { min-height: 90px; resize: vertical; }
   letter-spacing: -.02em; color: var(--ink); margin: 0;
 }
 .page-topbar .item-count { font-size: 13px; color: var(--ink-3); }
-.guest-badge {
-  font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: .02em;
-  color: var(--ink-3); border: 1px solid var(--off-ring); border-radius: var(--radius-pill);
-  padding: 2px 8px; cursor: help;
-}
 .page-topbar .search-bar { flex: 1; margin-top: 0; }
 .page-topbar .kbd-hint {
   font-family: var(--font-mono); font-size: 11px; color: var(--ink-4);
@@ -503,39 +498,54 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
-/* — subway dialog — an embedded same-origin calculator, presented in the same
-   dialog-backdrop/dialog frame as the other modals (not a full-bleed takeover),
-   so it reads as part of Foodbook rather than a page navigation. Stays mounted
-   while hidden (see SubwayScreen.tsx) so the iframe keeps its state between
-   visits, so unlike the other dialogs its entrance/exit animation is driven by
-   an explicit state class rather than mount/unmount. */
+/* — subway dialog — a boxed (not full-bleed) overlay where the embedded
+   calculator IS the content, with no separate header/footer chrome wrapped
+   around it — just a floating close button over the iframe. The box is
+   sized to the iframe's own (taller-than-viewport) height rather than
+   clipped to the screen, and it's the *backdrop* that scrolls — not the
+   iframe internally — because wheel input over an iframe never bubbles to
+   an ancestor scroller (cross-origin iframes are a separate browsing
+   context), so an inner scrollbar the iframe owns can't be driven by wheel
+   from outside it. Stays mounted while hidden (see SubwayScreen.tsx) so the
+   iframe keeps its state between visits, so unlike the other dialogs its
+   entrance/exit animation is driven by an explicit state class rather than
+   mount/unmount. */
+.subway-backdrop {
+  overflow-y: auto;
+  align-items: start;
+  justify-items: center;
+}
 .subway-backdrop.is-hidden {
   visibility: hidden; pointer-events: none;
 }
 .subway-backdrop.is-open { animation: backdrop-in 200ms ease; }
 .subway-backdrop.is-closing { animation: backdrop-out 180ms ease forwards; }
-/* Compound selector (not just .subway-dialog) so this reliably beats the
-   later, equal-specificity `.dialog { overflow-y: auto }` reskin rule —
-   without it the whole dialog becomes the scroll container instead of the
-   iframe, and wheel input over the iframe can't reach that outer scrollbar
-   (cross-origin iframes swallow wheel events rather than bubbling them). */
 .dialog.subway-dialog {
-  width: min(480px, 100%); height: min(680px, 100%); max-height: min(680px, 100%);
-  padding: var(--space-4); overflow: hidden;
+  position: relative;
+  width: min(480px, 100%); height: auto; max-height: none;
+  padding: 0; overflow: hidden; gap: 0;
 }
-.subway-dialog .dialog-header { flex: none; margin-bottom: var(--space-3); }
 .subway-dialog.is-open { animation: dialog-in 480ms var(--motion-entrance-bold); }
 .subway-dialog.is-closing { animation: dialog-out 180ms ease forwards; }
-.subway-dialog-footer { flex: none; display: flex; justify-content: flex-end; margin-top: var(--space-3); }
-.subway-dialog-footer .btn-primary { min-width: 96px; }
-.subway-iframe {
-  flex: 1; width: 100%; border: 0; display: block;
-  border-radius: var(--radius-sm); background: #fff;
-  /* The embedded calculator is a separate, white-themed site — it can't pick
-     up Foodbook's dark theme. A visible ring keeps that white block reading
-     as an intentionally framed card instead of a dark-mode leak. */
-  box-shadow: 0 0 0 1px var(--rule);
+.subway-close {
+  position: absolute; z-index: 2;
+  top: var(--space-3); right: var(--space-3);
+  width: 34px; height: 34px; border-radius: 50%; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer;
+  background: color-mix(in srgb, var(--color-neutral-900) 55%, transparent);
+  color: #fff;
+  backdrop-filter: blur(6px);
 }
+.subway-iframe {
+  width: 100%; height: 780px; border: 0; display: block;
+  background: #fff;
+}
+.subway-dialog-footer {
+  display: flex; justify-content: flex-end;
+  padding: var(--space-3);
+}
+.subway-dialog-footer .btn-primary { min-width: 96px; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    App-specific layout — food grid app (not part of the base design system)
@@ -732,6 +742,7 @@ body { background: var(--bg); }
   font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: .01em;
   background: color-mix(in srgb, var(--chip-ink) 16%, transparent);
   color: var(--chip-ink);
+  cursor: pointer;
 }
 .food-card .card-body {
   display: flex; flex-direction: column; gap: 8px;
@@ -990,8 +1001,8 @@ body { background: var(--bg); }
 .btn-add-subitem-row {
   display: flex; align-items: center; gap: 6px; width: 100%;
   height: 40px; padding: 0 12px;
-  background: var(--bg-soft); border: none; border-radius: var(--radius-sm);
-  color: var(--ink-3); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  background: var(--color-surface); border: none; border-radius: var(--radius-sm);
+  color: color-mix(in srgb, var(--color-text) 60%, transparent); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
 
@@ -999,7 +1010,7 @@ body { background: var(--bg); }
 .photo-upload-row {
   display: flex; align-items: center; gap: 10px;
   height: 52px; padding: 0 12px;
-  background: var(--bg-soft); border-radius: var(--radius-sm);
+  background: var(--color-surface); border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .photo-upload-thumb {

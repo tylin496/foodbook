@@ -18,12 +18,12 @@ interface FoodCardProps {
   reorderEnabled: boolean
   dragging: boolean
   removing: boolean
-  // Marks the one card whose tap opens an external calculator instead of
-  // toggling selection, so it can carry a visual cue distinguishing it from
-  // every other card.
+  // Marks the one card that carries a calculator badge, distinguishing it
+  // from every other card.
   isCalculatorLink: boolean
   onToggle: (id: string) => void
   onEdit: (id: string) => void
+  onOpenCalculator?: () => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
   onToggleIngredient: (id: string, subId: string, ingredientId: string) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
@@ -42,6 +42,7 @@ export function FoodCard({
   isCalculatorLink,
   onToggle,
   onEdit,
+  onOpenCalculator,
   onSetSubItemQty,
   onToggleIngredient,
   onDragHandlePointerDown,
@@ -311,7 +312,14 @@ export function FoodCard({
         <div className="food-name-line">
           <div className="food-name">{item.name}</div>
           {isCalculatorLink && (
-            <span className="calculator-badge" title="點擊開啟計算機">
+            <span
+              className="calculator-badge"
+              title="點擊開啟計算機"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenCalculator?.()
+              }}
+            >
               <Calculator size={11} strokeWidth={2.3} />
               計算機
             </span>

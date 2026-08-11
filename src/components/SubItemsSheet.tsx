@@ -33,7 +33,6 @@ export function SubItemsSheet({
   useFocusTrap(containerRef, true)
 
   const rows = subItems.map((sub) => ({ sub, activeQty: getEffectiveSubItemQty(sub, guestOverrides) }))
-  const selectedCount = rows.filter(({ activeQty }) => activeQty > 0).length
   const sortedRows = [...rows].sort((a, b) => Number(b.activeQty > 0) - Number(a.activeQty > 0))
 
   return createPortal(
@@ -56,7 +55,6 @@ export function SubItemsSheet({
         <div className="sub-items-sheet-list">
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
-            const isLastSelected = selected && selectedCount <= 1
             const totals = getSubItemTotals(sub, activeQty, guestIngredientOverrides)
             const ingredients = sub.ingredients ?? []
 
@@ -66,7 +64,6 @@ export function SubItemsSheet({
                   <button
                     type="button"
                     className="sub-items-sheet-row-name"
-                    disabled={isLastSelected}
                     onClick={() => onSetQty(sub.id, activeQty > 0 ? 0 : 1)}
                   >
                     {formatSubItemName(sub)}
@@ -75,7 +72,7 @@ export function SubItemsSheet({
                     <button
                       type="button"
                       aria-label="減少數量"
-                      disabled={activeQty <= 0 || isLastSelected}
+                      disabled={activeQty <= 0}
                       onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
                     >
                       <Minus size={13} />
@@ -113,7 +110,7 @@ export function SubItemsSheet({
                 )}
 
                 <div className="sub-items-sheet-row-stats">
-                  {formatAmount(totals.calories)}kcal/{formatAmount(totals.protein)}g 蛋白
+                  {formatAmount(totals.calories)}kcal/{formatAmount(totals.protein)}g
                 </div>
               </div>
             )
