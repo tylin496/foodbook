@@ -255,7 +255,7 @@ export function FoodCard({
       aria-pressed={selected}
     >
       <div
-        className={`photo${holding ? ' is-holding' : ''}`}
+        className={`photo${holding ? ' is-holding' : ''}${reorderEnabled ? ' is-draggable' : ''}`}
         style={reorderEnabled ? { touchAction: 'none' } : undefined}
         onPointerDown={handlePhotoPointerDown}
         onPointerMove={handlePhotoPointerMove}
