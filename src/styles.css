@@ -388,6 +388,8 @@ textarea.input { min-height: 90px; resize: vertical; }
   border: 1px solid var(--off-ring); border-radius: 5px; padding: 1px 6px;
 }
 .page-topbar .topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.signin-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.signin-wrap .upload-error { margin-top: 0; }
 @media (max-width: 560px) {
   .page-topbar { flex-wrap: wrap; }
   .page-topbar .search-bar { flex-basis: 100%; order: 3; margin-top: 12px; }

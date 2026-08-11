@@ -24,7 +24,7 @@ const SUBWAY_ORIGIN = new URL(SUBWAY_CALCULATOR_URL).origin
 type SubwayResult = { hasSelection: boolean; mainName?: string; kcal?: number; protein?: number }
 
 export default function App() {
-  const { user, loading: authLoading, signIn, logOut } = useAuth()
+  const { user, loading: authLoading, signIn, logOut, signInError } = useAuth()
 
   if (authLoading) return null
 
@@ -37,6 +37,7 @@ export default function App() {
       photoURL={user?.photoURL ?? null}
       onSignIn={signIn}
       onLogOut={logOut}
+      signInError={signInError}
     />
   )
 }
@@ -47,12 +48,14 @@ function FoodBook({
   photoURL,
   onSignIn,
   onLogOut,
+  signInError,
 }: {
   isOwner: boolean
   userLabel: string
   photoURL: string | null
   onSignIn: () => void
   onLogOut: () => void
+  signInError: boolean
 }) {
   const [items, setItems, itemsLoading] = useCloudItems(OWNER_UID)
   const { overrides: guestOverrides, toggle: toggleGuestSubItem } = useGuestOverrides()
@@ -770,9 +773,12 @@ function FoodBook({
                   </button>
                 </>
               ) : (
-                <button type="button" className="btn btn-secondary" onClick={onSignIn}>
-                  使用 Google 登入
-                </button>
+                <div className="signin-wrap">
+                  {signInError && <div className="upload-error">登入失敗，請重試</div>}
+                  <button type="button" className="btn btn-secondary" onClick={onSignIn}>
+                    使用 Google 登入
+                  </button>
+                </div>
               )}
             </div>
           </header>
