@@ -711,6 +711,11 @@ function FoodBook({
             <div className="title-row">
               <h1>Foodbook</h1>
               <span className="item-count">{items.length} 筆</span>
+              {!isOwner && (
+                <span className="guest-badge" title="子項目的勾選只會存在你的裝置上，不會同步給其他人或寫入原始紀錄">
+                  檢視模式
+                </span>
+              )}
             </div>
 
             <div className="search-bar">
