@@ -35,10 +35,16 @@ export function useCloudItems(uid: string) {
   const [items, setItemsState] = useState<FoodItem[]>(() => readLocalCache())
   const [loading, setLoading] = useState(true)
   const migratedRef = useRef(false)
+  // Chains setDoc calls so they hit Firestore in call order. Without this,
+  // two writes fired close together race on the network and whichever
+  // response lands last wins — silently reverting a newer save with a
+  // stale one even though both promises resolve { ok: true }.
+  const writeQueueRef = useRef<Promise<unknown>>(Promise.resolve())
 
   useEffect(() => {
     setLoading(true)
     migratedRef.current = false
+    writeQueueRef.current = Promise.resolve()
     const ref = itemsDocRef(uid)
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
@@ -70,13 +76,15 @@ export function useCloudItems(uid: string) {
         setItemsState((prev) => {
           const resolved = typeof next === 'function' ? (next as (prev: FoodItem[]) => FoodItem[])(prev) : next
           writeLocalCache(resolved)
-          setDoc(itemsDocRef(uid), { items: resolved }).then(
-            () => resolve({ ok: true }),
-            (err) => {
-              // Offline writes queue locally and resync once reconnected —
-              // that's still a success. Anything else is a real failure.
-              resolve({ ok: err?.code === 'unavailable' })
-            },
+          writeQueueRef.current = writeQueueRef.current.then(() =>
+            setDoc(itemsDocRef(uid), { items: resolved }).then(
+              () => resolve({ ok: true }),
+              (err) => {
+                // Offline writes queue locally and resync once reconnected —
+                // that's still a success. Anything else is a real failure.
+                resolve({ ok: err?.code === 'unavailable' })
+              },
+            ),
           )
           return resolved
         })
