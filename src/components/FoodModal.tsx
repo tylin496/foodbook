@@ -12,7 +12,9 @@ interface FoodModalProps {
   isEditing: boolean
   closing: boolean
   onChange: (draft: FoodDraft) => void
-  onSave: () => void
+  // Resolves once the write actually settles, with whether it succeeded —
+  // the modal waits for this before claiming success.
+  onSave: () => Promise<boolean>
   onCancel: () => void
   onDelete: () => void
   onImageUploaded: (id: string, url: string) => void
@@ -37,20 +39,19 @@ export function FoodModal({
   const [preview, setPreview] = useState<string | null>(draft.imageUrl)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
-  const [saveState, setSaveState] = useState<'idle' | 'success'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
   const saveTimerRef = useRef<number | null>(null)
   const onSaveRef = useRef(onSave)
   onSaveRef.current = onSave
+  const onCancelRef = useRef(onCancel)
+  onCancelRef.current = onCancel
 
   useEffect(() => {
+    // The write already happened by the time we reach 'success' (see
+    // handleSaveClick below) — this timer just holds the checkmark on screen
+    // for a beat before closing, so on unmount there's nothing left to flush.
     return () => {
-      // If the modal gets dismissed another way (Escape, backdrop, X button)
-      // while the success checkmark is still playing, don't drop the save
-      // that already showed as "done" — flush it instead of cancelling it.
-      if (saveTimerRef.current !== null) {
-        window.clearTimeout(saveTimerRef.current)
-        onSaveRef.current()
-      }
+      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current)
     }
   }, [])
 
@@ -58,12 +59,18 @@ export function FoodModal({
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, true)
 
-  const handleSaveClick = () => {
-    if (draft.name.trim().length === 0 || saveState === 'success') return
+  const handleSaveClick = async () => {
+    if (draft.name.trim().length === 0 || saveState === 'saving' || saveState === 'success') return
+    setSaveState('saving')
+    const ok = await onSaveRef.current()
+    if (!ok) {
+      setSaveState('error')
+      return
+    }
     setSaveState('success')
     saveTimerRef.current = window.setTimeout(() => {
       saveTimerRef.current = null
-      onSaveRef.current()
+      onCancelRef.current()
     }, 560)
   }
 
@@ -711,25 +718,32 @@ export function FoodModal({
               </button>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>
-              取消
-            </button>
-            {saveState === 'idle' ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={draft.name.trim().length === 0}
-                onClick={handleSaveClick}
-              >
-                儲存
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            {saveState === 'error' && <div className="upload-error">儲存失敗，請確認網路連線後重試</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary" onClick={onCancel}>
+                取消
               </button>
-            ) : (
-              <button type="button" className="btn btn-primary" disabled>
-                <Check size={16} className="save-success-icon" strokeWidth={3} />
-                已儲存
-              </button>
-            )}
+              {saveState === 'idle' || saveState === 'error' ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={draft.name.trim().length === 0}
+                  onClick={handleSaveClick}
+                >
+                  {saveState === 'error' ? '重試' : '儲存'}
+                </button>
+              ) : saveState === 'saving' ? (
+                <button type="button" className="btn btn-primary" disabled>
+                  儲存中…
+                </button>
+              ) : (
+                <button type="button" className="btn btn-primary" disabled>
+                  <Check size={16} className="save-success-icon" strokeWidth={3} />
+                  已儲存
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
