@@ -471,13 +471,6 @@ export function FoodModal({
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return
           if (e.nativeEvent.isComposing) return
-          const target = e.target as HTMLElement
-          // Only the top-level fields save-on-Enter — sub-item/ingredient rows
-          // sit in the same dialog but aren't a real <form>, so without this
-          // scoping Enter while naming a sub-item saved and closed the whole
-          // record instead of just moving on.
-          const isTopLevelField = ['food-name', 'food-calories', 'food-protein', 'food-weight'].includes(target.id)
-          if (!isTopLevelField) return
           e.preventDefault()
           handleSaveClick()
         }}
