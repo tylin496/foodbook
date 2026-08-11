@@ -929,7 +929,10 @@ body { background: var(--bg); }
   letter-spacing: .04em; color: var(--ink-3); margin-top: 1px;
 }
 .selection-bar .stat-rule { width: 1px; height: 22px; background: var(--rule); }
-.selection-bar .icon-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+/* 8px, not 2px: "清除選取" sits right next to "複製" — wipes the whole
+   selection in one tap, so it needs enough gap that a fat-finger reach for
+   copy doesn't land on it instead. */
+.selection-bar .icon-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 .selection-bar .icon-btn {
   width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
   border: none; border-radius: var(--radius-pill);
