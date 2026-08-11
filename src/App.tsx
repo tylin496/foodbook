@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Image as ImageIcon, Plus, Search } from 'lucide-react'
+import { Image as ImageIcon, Plus, Search, X } from 'lucide-react'
 import { useAuth } from './useAuth'
 import { useTheme } from './useTheme'
 import { useCloudItems } from './useCloudItems'
@@ -724,7 +724,22 @@ function FoodBook({
                 }}
                 placeholder="搜尋食物名稱"
               />
-              <span className="kbd-hint">/</span>
+              {search ? (
+                <button
+                  type="button"
+                  className="search-clear"
+                  aria-label="清除搜尋"
+                  onClick={() => {
+                    captureRects()
+                    setSearch('')
+                    searchInputRef.current?.focus()
+                  }}
+                >
+                  <X size={13} strokeWidth={2.4} />
+                </button>
+              ) : (
+                <span className="kbd-hint">/</span>
+              )}
             </div>
 
             <div className="topbar-actions">
