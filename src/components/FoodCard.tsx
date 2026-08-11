@@ -25,7 +25,8 @@ interface FoodCardProps {
   onEdit: (id: string) => void
   onOpenCalculator?: () => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
-  onToggleIngredient: (id: string, subId: string, ingredientId: string) => void
+  onSetIngredientQty: (id: string, subId: string, ingredientId: string, qty: number) => void
+  onReorderIngredients?: (id: string, subId: string, orderedIngredientIds: string[]) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
   guestOverrides?: SubItemOverrides
   guestIngredientOverrides?: IngredientOverrides
@@ -44,7 +45,8 @@ export function FoodCard({
   onEdit,
   onOpenCalculator,
   onSetSubItemQty,
-  onToggleIngredient,
+  onSetIngredientQty,
+  onReorderIngredients,
   onDragHandlePointerDown,
   guestOverrides,
   guestIngredientOverrides,
@@ -401,10 +403,15 @@ export function FoodCard({
             sheetChangedRef.current = true
             onSetSubItemQty(item.id, subId, qty)
           }}
-          onToggleIngredient={(subId, ingredientId) => {
+          onSetIngredientQty={(subId, ingredientId, qty) => {
             sheetChangedRef.current = true
-            onToggleIngredient(item.id, subId, ingredientId)
+            onSetIngredientQty(item.id, subId, ingredientId, qty)
           }}
+          onReorderIngredients={
+            onReorderIngredients
+              ? (subId, orderedIngredientIds) => onReorderIngredients(item.id, subId, orderedIngredientIds)
+              : undefined
+          }
         />
       )}
     </div>

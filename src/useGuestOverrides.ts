@@ -41,13 +41,12 @@ export function useGuestOverrides() {
     })
   }
 
-  const toggleIngredient = (itemId: string, ingredientId: string, baseSelected: boolean) => {
+  const setIngredientQty = (itemId: string, ingredientId: string, qty: number) => {
     setIngredientOverrides((prev) => {
       const itemOverrides = prev[itemId] ?? {}
-      const current = itemOverrides[ingredientId] ?? baseSelected
-      return { ...prev, [itemId]: { ...itemOverrides, [ingredientId]: !current } }
+      return { ...prev, [itemId]: { ...itemOverrides, [ingredientId]: qty } }
     })
   }
 
-  return { overrides, ingredientOverrides, setQty, toggleIngredient }
+  return { overrides, ingredientOverrides, setQty, setIngredientQty }
 }

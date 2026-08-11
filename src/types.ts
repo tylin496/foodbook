@@ -9,6 +9,10 @@ export interface FoodIngredient {
   protein: number
   calories: number
   selected?: boolean
+  // How many portions of this ingredient's weight/protein/calories were
+  // consumed (e.g. an extra egg, a double portion of steak) — mirrors
+  // FoodSubItem.qty. Missing/undefined means 1.
+  qty?: number
 }
 
 export interface FoodSubItem {
@@ -43,6 +47,7 @@ export type FoodIngredientDraft = {
   protein: string
   calories: string
   selected: boolean
+  qty: string
 }
 
 export type FoodSubItemDraft = {
@@ -89,15 +94,19 @@ export function isSubItemSelected(sub: FoodSubItem, overrides?: SubItemOverrides
   return getEffectiveSubItemQty(sub, overrides) > 0
 }
 
-// A guest's local ingredient exclusions never touch the shared record — this
-// is the per-item override map (ingredientId -> selected) layered on top of
-// it for display/totals, mirroring SubItemOverrides.
-export type IngredientOverrides = Record<string, boolean>
+// A guest's local ingredient qty changes never touch the shared record — this
+// is the per-item override map (ingredientId -> qty) layered on top of it for
+// display/totals, mirroring SubItemOverrides. A qty of 0 means excluded.
+export type IngredientOverrides = Record<string, number>
+
+export function getEffectiveIngredientQty(ing: FoodIngredient, overrides?: IngredientOverrides): number {
+  const overrideQty = overrides?.[ing.id]
+  if (overrideQty !== undefined) return overrideQty
+  return ing.selected === false ? 0 : (ing.qty ?? 1)
+}
 
 export function isIngredientSelected(ing: FoodIngredient, overrides?: IngredientOverrides): boolean {
-  const override = overrides?.[ing.id]
-  if (override !== undefined) return override
-  return ing.selected !== false
+  return getEffectiveIngredientQty(ing, overrides) > 0
 }
 
 function sumIngredients(
@@ -108,16 +117,18 @@ function sumIngredients(
   protein: number
   calories: number
 } {
-  return (ingredients ?? [])
-    .filter((ing) => isIngredientSelected(ing, overrides))
-    .reduce(
-      (acc, ing) => ({
-        weight: acc.weight + ing.weight,
-        protein: acc.protein + ing.protein,
-        calories: acc.calories + ing.calories,
-      }),
-      { weight: 0, protein: 0, calories: 0 },
-    )
+  return (ingredients ?? []).reduce(
+    (acc, ing) => {
+      const qty = getEffectiveIngredientQty(ing, overrides)
+      if (qty <= 0) return acc
+      return {
+        weight: acc.weight + ing.weight * qty,
+        protein: acc.protein + ing.protein * qty,
+        calories: acc.calories + ing.calories * qty,
+      }
+    },
+    { weight: 0, protein: 0, calories: 0 },
+  )
 }
 
 // A sub-item's own total folds in its ingredients — excluding the sub-item

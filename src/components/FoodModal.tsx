@@ -175,6 +175,7 @@ export function FoodModal({
       protein: '',
       calories: '',
       selected: true,
+      qty: '1',
     }
 
     // First ingredient: split the sub-item's own manually-entered numbers out
@@ -190,6 +191,7 @@ export function FoodModal({
         protein: sub.protein,
         calories: sub.calories,
         selected: true,
+        qty: '1',
       }
       updateSubItem(subId, {
         weight: '0',
@@ -247,11 +249,15 @@ export function FoodModal({
     const countedIngredients = ingredients.filter((ing) => ing.selected !== false)
     const hasIngredients = ingredients.length > 0
     const qty = toNumber(sub.qty) || 1
-    const baseWeight = toNumber(sub.weight) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.weight), 0)
+    const ingredientQty = (ing: FoodIngredientDraft) => toNumber(ing.qty) || 1
+    const baseWeight =
+      toNumber(sub.weight) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.weight) * ingredientQty(ing), 0)
     const baseCalories =
-      toNumber(sub.calories) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.calories), 0)
+      toNumber(sub.calories) +
+      countedIngredients.reduce((sum, ing) => sum + toNumber(ing.calories) * ingredientQty(ing), 0)
     const baseProtein =
-      toNumber(sub.protein) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.protein), 0)
+      toNumber(sub.protein) +
+      countedIngredients.reduce((sum, ing) => sum + toNumber(ing.protein) * ingredientQty(ing), 0)
     return {
       hasIngredients,
       qty,
@@ -430,6 +436,178 @@ export function FoodModal({
 
   useEffect(() => {
     return () => stopSubItemSpringLoop()
+  }, [])
+
+  // Mirrors the sub-item drag system above, scoped to one sub-item's own
+  // ingredients list at a time (drag state carries which sub-item it's in).
+  const ingredientContainersRef = useRef<Map<string, HTMLDivElement>>(new Map())
+  const ingredientDragMetaRef = useRef<{ subId: string; id: string; grabOffsetY: number } | null>(null)
+  const lastIngredientPointerYRef = useRef(0)
+  const ingredientSpringOffsetRef = useRef<number | null>(null)
+  const ingredientDragRafRef = useRef<number | null>(null)
+  const prevIngredientRectsRef = useRef<{ subId: string; rects: Record<string, DOMRect> } | null>(null)
+  const [draggingIngredientId, setDraggingIngredientId] = useState<string | null>(null)
+
+  const findIngredientRowEl = (subId: string, id: string): HTMLElement | null =>
+    ingredientContainersRef.current.get(subId)?.querySelector<HTMLElement>(`[data-ingredient-id="${CSS.escape(id)}"]`) ??
+    null
+
+  const captureIngredientRects = (subId: string, excludeId?: string) => {
+    const container = ingredientContainersRef.current.get(subId)
+    if (!container) return
+    const rects: Record<string, DOMRect> = {}
+    container.querySelectorAll<HTMLElement>('[data-ingredient-id]').forEach((el) => {
+      const id = el.dataset.ingredientId
+      if (id && id !== excludeId) rects[id] = el.getBoundingClientRect()
+    })
+    prevIngredientRectsRef.current = { subId, rects }
+  }
+
+  const computeIngredientDragOffsetY = (el: HTMLElement, clientY: number) => {
+    const meta = ingredientDragMetaRef.current
+    if (!meta) return 0
+    const saved = el.style.transform
+    el.style.transform = ''
+    const rect = el.getBoundingClientRect()
+    el.style.transform = saved
+    return clientY - meta.grabOffsetY - rect.top
+  }
+
+  const applyIngredientDragTransform = (el: HTMLElement, y: number) => {
+    el.style.transform = `translateY(${y}px) scale(1.02)`
+  }
+
+  const INGREDIENT_SPRING_FACTOR = 0.35
+
+  const stopIngredientSpringLoop = () => {
+    if (ingredientDragRafRef.current !== null) {
+      cancelAnimationFrame(ingredientDragRafRef.current)
+      ingredientDragRafRef.current = null
+    }
+    ingredientSpringOffsetRef.current = null
+  }
+
+  const startIngredientSpringLoop = (subId: string, id: string) => {
+    const step = () => {
+      const meta = ingredientDragMetaRef.current
+      const el = meta && meta.subId === subId && meta.id === id ? findIngredientRowEl(subId, id) : null
+      const current = ingredientSpringOffsetRef.current
+      if (!meta || !el || current === null) {
+        ingredientDragRafRef.current = null
+        return
+      }
+      const target = computeIngredientDragOffsetY(el, lastIngredientPointerYRef.current)
+      const next = current + (target - current) * INGREDIENT_SPRING_FACTOR
+      ingredientSpringOffsetRef.current = next
+      applyIngredientDragTransform(el, next)
+      ingredientDragRafRef.current = requestAnimationFrame(step)
+    }
+    ingredientDragRafRef.current = requestAnimationFrame(step)
+  }
+
+  useLayoutEffect(() => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const pending = prevIngredientRectsRef.current
+    if (!pending) return
+    prevIngredientRectsRef.current = null
+    const { subId, rects } = pending
+    const dragId = ingredientDragMetaRef.current?.id
+    if (reducedMotion) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        Object.keys(rects).forEach((id) => {
+          if (id === dragId) return
+          const el = findIngredientRowEl(subId, id)
+          if (!el) return
+          const prev = rects[id]
+          const now = el.getBoundingClientRect()
+          const dy = prev.top - now.top
+          if (Math.abs(dy) < 0.5) return
+          el.style.transition = 'none'
+          el.style.transform = `translateY(${dy}px)`
+          requestAnimationFrame(() => {
+            el.style.transition = 'transform var(--motion-flip-bold)'
+            el.style.transform = ''
+            const handleEnd = () => {
+              el.style.transition = ''
+              el.removeEventListener('transitionend', handleEnd)
+            }
+            el.addEventListener('transitionend', handleEnd)
+          })
+        })
+      })
+    })
+  })
+
+  const handleIngredientGripDown = (e: React.PointerEvent<HTMLButtonElement>, subId: string, id: string) => {
+    e.preventDefault()
+    const el = findIngredientRowEl(subId, id)
+    if (!el) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const rect = el.getBoundingClientRect()
+    ingredientDragMetaRef.current = { subId, id, grabOffsetY: e.clientY - rect.top }
+    lastIngredientPointerYRef.current = e.clientY
+    el.style.transition = 'transform 140ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 140ms ease'
+    el.style.zIndex = '2'
+    el.style.boxShadow = 'var(--shadow-lg)'
+    const startOffset = computeIngredientDragOffsetY(el, e.clientY)
+    applyIngredientDragTransform(el, startOffset)
+    setDraggingIngredientId(id)
+    window.setTimeout(() => {
+      if (ingredientDragMetaRef.current?.subId !== subId || ingredientDragMetaRef.current?.id !== id) return
+      el.style.transition = 'none'
+      ingredientSpringOffsetRef.current = startOffset
+      startIngredientSpringLoop(subId, id)
+    }, 140)
+  }
+
+  const handleIngredientGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const dragging = ingredientDragMetaRef.current
+    const container = dragging ? ingredientContainersRef.current.get(dragging.subId) : null
+    if (!dragging || !container) return
+    lastIngredientPointerYRef.current = e.clientY
+    const sub = draft.subItems.find((s) => s.id === dragging.subId)
+    const ingredients = sub?.ingredients ?? []
+    const draggedIndex = ingredients.findIndex((ing) => ing.id === dragging.id)
+    if (draggedIndex === -1) return
+    const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-ingredient-id]'))
+    for (let i = 0; i < rows.length; i++) {
+      if (i === draggedIndex) continue
+      const rect = rows[i].getBoundingClientRect()
+      const mid = rect.top + rect.height / 2
+      const crossed = (i < draggedIndex && e.clientY < mid) || (i > draggedIndex && e.clientY > mid)
+      if (crossed) {
+        captureIngredientRects(dragging.subId, dragging.id)
+        const next = [...ingredients]
+        const [moved] = next.splice(draggedIndex, 1)
+        next.splice(i, 0, moved)
+        updateSubItem(dragging.subId, { ingredients: next })
+        break
+      }
+    }
+  }
+
+  const handleIngredientGripUp = () => {
+    const meta = ingredientDragMetaRef.current
+    stopIngredientSpringLoop()
+    if (meta) {
+      const el = findIngredientRowEl(meta.subId, meta.id)
+      if (el) {
+        el.style.transition = 'transform var(--motion-flip-bold), box-shadow 200ms ease'
+        el.style.transform = ''
+        window.setTimeout(() => {
+          el.style.boxShadow = ''
+          el.style.zIndex = ''
+          el.style.transition = ''
+        }, 340)
+      }
+    }
+    ingredientDragMetaRef.current = null
+    setDraggingIngredientId(null)
+  }
+
+  useEffect(() => {
+    return () => stopIngredientSpringLoop()
   }, [])
 
   const hasSubItems = draft.subItems.length > 0
@@ -695,10 +873,31 @@ export function FoodModal({
                         </button>
                       </div>
                       {(sub.ingredients?.length ?? 0) > 0 && (
-                        <div className="ingredients">
+                        <div
+                          className="ingredients"
+                          ref={(el) => {
+                            if (el) ingredientContainersRef.current.set(sub.id, el)
+                            else ingredientContainersRef.current.delete(sub.id)
+                          }}
+                        >
                           {sub.ingredients!.map((ing) => (
-                            <div className={`ingredient-row${ing.selected ? '' : ' is-excluded'}`} key={ing.id}>
+                            <div
+                              className={`ingredient-row${ing.selected ? '' : ' is-excluded'}${ing.id === draggingIngredientId ? ' is-dragging' : ''}`}
+                              key={ing.id}
+                              data-ingredient-id={ing.id}
+                            >
                               <div className="ingredient-row-top">
+                                <button
+                                  type="button"
+                                  className="ingredient-grip"
+                                  aria-label="拖曳排序成分"
+                                  onPointerDown={(e) => handleIngredientGripDown(e, sub.id, ing.id)}
+                                  onPointerMove={handleIngredientGripMove}
+                                  onPointerUp={handleIngredientGripUp}
+                                  onPointerCancel={handleIngredientGripUp}
+                                >
+                                  <GripVertical size={12} />
+                                </button>
                                 <label className="checkbox-tap-area">
                                   <input
                                     type="checkbox"
@@ -714,6 +913,21 @@ export function FoodModal({
                                   onChange={(e) => updateIngredient(sub.id, ing.id, { name: e.target.value })}
                                   placeholder="例如：鐵板麵"
                                 />
+                                <div className="sub-item-qty-wrap" title="份數（幾份）">
+                                  <span className="sub-item-qty-x">×</span>
+                                  <input
+                                    className="input sub-item-qty"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    step="1"
+                                    value={ing.qty}
+                                    onChange={(e) =>
+                                      updateIngredient(sub.id, ing.id, { qty: clampNonNegative(e.target.value) })
+                                    }
+                                    aria-label="份數"
+                                  />
+                                </div>
                                 <button
                                   type="button"
                                   className="sub-item-remove"
@@ -734,7 +948,7 @@ export function FoodModal({
                                     onChange={(e) =>
                                       updateIngredient(sub.id, ing.id, { weight: clampNonNegative(e.target.value) })
                                     }
-                                    placeholder="重量"
+                                    placeholder={toNumber(ing.qty) !== 1 ? '每份重量' : '重量'}
                                   />
                                   <span className="input-unit">g</span>
                                 </div>
@@ -748,7 +962,7 @@ export function FoodModal({
                                     onChange={(e) =>
                                       updateIngredient(sub.id, ing.id, { calories: clampNonNegative(e.target.value) })
                                     }
-                                    placeholder="熱量"
+                                    placeholder={toNumber(ing.qty) !== 1 ? '每份熱量' : '熱量'}
                                   />
                                   <span className="input-unit">kcal</span>
                                 </div>
@@ -762,7 +976,7 @@ export function FoodModal({
                                     onChange={(e) =>
                                       updateIngredient(sub.id, ing.id, { protein: clampNonNegative(e.target.value) })
                                     }
-                                    placeholder="蛋白質"
+                                    placeholder={toNumber(ing.qty) !== 1 ? '每份蛋白質' : '蛋白質'}
                                   />
                                   <span className="input-unit">g</span>
                                 </div>

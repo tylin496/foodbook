@@ -53,8 +53,9 @@ export function formatItemsAsText(
       lines.push(`   - ${formatSubItemName(sub)}：${formatAmount(subTotals.weight)}g`)
       lines.push(`     ${formatAmount(subTotals.calories)}kcal / ${formatAmount(subTotals.protein)}g`)
       for (const ing of sub.ingredients ?? []) {
-        lines.push(`     · ${ing.name}：${formatAmount(ing.weight * qty)}g`)
-        lines.push(`       ${formatAmount(ing.calories * qty)}kcal / ${formatAmount(ing.protein * qty)}g`)
+        const ingQty = (ing.qty ?? 1) * qty
+        lines.push(`     · ${formatSubItemName(ing)}：${formatAmount(ing.weight * ingQty)}g`)
+        lines.push(`       ${formatAmount(ing.calories * ingQty)}kcal / ${formatAmount(ing.protein * ingQty)}g`)
       }
     }
   })

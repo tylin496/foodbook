@@ -64,7 +64,7 @@ function FoodBook({
     overrides: guestOverrides,
     ingredientOverrides: guestIngredientOverrides,
     setQty: setGuestSubItemQty,
-    toggleIngredient: toggleGuestIngredient,
+    setIngredientQty: setGuestIngredientQty,
   } = useGuestOverrides()
   const { confirm, confirmDialogProps } = useConfirm()
   useTheme()
@@ -521,6 +521,7 @@ function FoodBook({
             protein: String(ing.protein),
             calories: String(ing.calories),
             selected: ing.selected !== false,
+            qty: String(ing.qty ?? 1),
           })),
         ),
       })),
@@ -588,9 +589,10 @@ function FoodBook({
     )
   }
 
-  // Toggles one nested ingredient (e.g. "麵包一片" left off a burger) without
-  // touching its sub-item's own qty/selected.
-  const toggleIngredientSelected = (id: string, subId: string, ingredientId: string) => {
+  // Sets one nested ingredient's qty (e.g. "多一個蛋", or 0 to leave off a
+  // burger's bun) without touching its sub-item's own qty/selected. qty 0
+  // excludes the ingredient but keeps its stored qty, mirroring setSubItemQty.
+  const setIngredientQty = (id: string, subId: string, ingredientId: string, qty: number) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
@@ -603,7 +605,9 @@ function FoodBook({
               : {
                   ...sub,
                   ingredients: (sub.ingredients ?? []).map((ing) =>
-                    ing.id === ingredientId ? { ...ing, selected: ing.selected === false } : ing,
+                    ing.id === ingredientId
+                      ? { ...ing, selected: qty > 0, qty: qty > 0 ? qty : ing.qty }
+                      : ing,
                   ),
                 },
           ),
@@ -635,18 +639,37 @@ function FoodBook({
   }
 
   // Owner edits write straight to the shared record; guests can't write there,
-  // so their ingredient taps flip a local-only override instead (see useGuestOverrides).
-  const handleToggleIngredient = (id: string, subId: string, ingredientId: string) => {
+  // so their ingredient qty changes flip a local-only override instead (see useGuestOverrides).
+  const handleSetIngredientQty = (id: string, subId: string, ingredientId: string, qty: number) => {
     if (isOwner) {
-      toggleIngredientSelected(id, subId, ingredientId)
+      setIngredientQty(id, subId, ingredientId, qty)
       return
     }
-    const ing = items
-      .find((item) => item.id === id)
-      ?.subItems?.find((sub) => sub.id === subId)
-      ?.ingredients?.find((i) => i.id === ingredientId)
-    if (!ing) return
-    toggleGuestIngredient(id, ingredientId, ing.selected !== false)
+    setGuestIngredientQty(id, ingredientId, qty)
+  }
+
+  // Manual drag order from the sub-items sheet — rewrites the shared record
+  // directly, so it's only ever wired up for the owner (see FoodCard).
+  const reorderIngredients = (id: string, subId: string, orderedIngredientIds: string[]) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const subItems = item.subItems ?? []
+        return {
+          ...item,
+          subItems: subItems.map((sub) => {
+            if (sub.id !== subId) return sub
+            const byId = new Map((sub.ingredients ?? []).map((ing) => [ing.id, ing]))
+            return {
+              ...sub,
+              ingredients: orderedIngredientIds
+                .map((ingId) => byId.get(ingId))
+                .filter((ing): ing is NonNullable<typeof ing> => ing != null),
+            }
+          }),
+        }
+      }),
+    )
   }
 
   // Returns whether the write actually landed, so the modal can show a real
@@ -675,6 +698,7 @@ function FoodBook({
             protein: toNumber(ing.protein),
             calories: toNumber(ing.calories),
             selected: ing.selected,
+            qty: toNumber(ing.qty) || 1,
           })),
       }))
     captureRects()
@@ -844,7 +868,8 @@ function FoodBook({
                   onOpenCalculator={openSubwayCalculator}
                   onEdit={openEditModal}
                   onSetSubItemQty={handleSetSubItemQty}
-                  onToggleIngredient={handleToggleIngredient}
+                  onSetIngredientQty={handleSetIngredientQty}
+                  onReorderIngredients={isOwner ? reorderIngredients : undefined}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}
                   guestIngredientOverrides={isOwner ? undefined : guestIngredientOverrides[item.id]}
