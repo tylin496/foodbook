@@ -26,6 +26,7 @@ interface FoodCardProps {
   onEdit: (id: string) => void
   onToggleSubItem: (id: string, subId: string) => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
+  onRemoveSubItem: (id: string, subId: string) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
   guestOverrides?: SubItemOverrides
 }
@@ -43,6 +44,7 @@ export function FoodCard({
   onEdit,
   onToggleSubItem,
   onSetSubItemQty,
+  onRemoveSubItem,
   onDragHandlePointerDown,
   guestOverrides,
 }: FoodCardProps) {
@@ -379,6 +381,7 @@ export function FoodCard({
           onClose={closeSheet}
           onToggle={(subId) => onToggleSubItem(item.id, subId)}
           onSetQty={(subId, qty) => onSetSubItemQty(item.id, subId, qty)}
+          onRemove={(subId) => onRemoveSubItem(item.id, subId)}
         />
       )}
     </div>

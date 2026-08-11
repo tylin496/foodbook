@@ -589,6 +589,18 @@ function FoodBook({
     )
   }
 
+  // Sub-items are only ever created via the edit modal — this sheet-side
+  // action can only remove one, never add.
+  const removeSubItem = (id: string, subId: string) => {
+    if (!isOwner) return
+    if (!window.confirm('確定要刪除這個子項目嗎？')) return
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id !== id ? item : { ...item, subItems: (item.subItems ?? []).filter((sub) => sub.id !== subId) },
+      ),
+    )
+  }
+
   // Owner edits write straight to the shared record; guests can't write there,
   // so their taps flip a local-only override instead (see useGuestOverrides).
   const handleToggleSubItem = (id: string, subId: string) => {
@@ -776,6 +788,7 @@ function FoodBook({
                   onEdit={openEditModal}
                   onToggleSubItem={handleToggleSubItem}
                   onSetSubItemQty={setSubItemQty}
+                  onRemoveSubItem={removeSubItem}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}
                 />

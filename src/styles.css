@@ -805,6 +805,16 @@ body { background: var(--bg); }
 .sub-items-sheet-row-top {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
 }
+.sub-items-sheet-row-controls { flex: none; display: flex; align-items: center; gap: 6px; }
+.sub-items-sheet-row-remove {
+  all: unset; box-sizing: border-box; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: var(--radius-pill);
+  color: var(--ink-4);
+  transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
+}
+.sub-items-sheet-row-remove:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent); }
 .sub-items-sheet-row-name {
   font-family: var(--font-ui); font-weight: 600; font-size: 14px; color: var(--ink);
 }

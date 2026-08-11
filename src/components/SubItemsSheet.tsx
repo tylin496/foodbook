@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { Minus, Plus, X } from 'lucide-react'
+import { Minus, Plus, Trash2, X } from 'lucide-react'
 import type { FoodSubItem, SubItemOverrides } from '../types'
 import { getSubItemTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
@@ -14,6 +14,7 @@ interface SubItemsSheetProps {
   onClose: () => void
   onToggle: (subId: string) => void
   onSetQty: (subId: string, qty: number) => void
+  onRemove: (subId: string) => void
 }
 
 export function SubItemsSheet({
@@ -25,6 +26,7 @@ export function SubItemsSheet({
   onClose,
   onToggle,
   onSetQty,
+  onRemove,
 }: SubItemsSheetProps) {
   const backdropProps = useDialogDismiss(onClose)
 
@@ -58,22 +60,32 @@ export function SubItemsSheet({
                       {selected ? '已計入' : '已排除'}
                     </button>
                   ) : (
-                    <div className="sub-item-qty-stepper">
+                    <div className="sub-items-sheet-row-controls">
+                      <div className="sub-item-qty-stepper">
+                        <button
+                          type="button"
+                          aria-label="減少數量"
+                          disabled={activeQty <= 0}
+                          onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
+                        <button
+                          type="button"
+                          aria-label="增加數量"
+                          onClick={() => onSetQty(sub.id, activeQty + 1)}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        aria-label="減少數量"
-                        disabled={activeQty <= 0}
-                        onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
+                        className="sub-items-sheet-row-remove"
+                        aria-label="刪除子項目"
+                        onClick={() => onRemove(sub.id)}
                       >
-                        <Minus size={13} />
-                      </button>
-                      <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
-                      <button
-                        type="button"
-                        aria-label="增加數量"
-                        onClick={() => onSetQty(sub.id, activeQty + 1)}
-                      >
-                        <Plus size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   )}
