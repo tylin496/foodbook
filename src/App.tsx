@@ -4,7 +4,7 @@ import { useAuth } from './useAuth'
 import { useTheme } from './useTheme'
 import { useCloudItems } from './useCloudItems'
 import { useGuestOverrides } from './useGuestOverrides'
-import type { FoodDraft, FoodItem } from './types'
+import type { FoodDraft } from './types'
 import { emptyDraft, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
@@ -613,8 +613,13 @@ function FoodBook({
     toggleGuestSubItem(id, subId, sub.selected !== false)
   }
 
-  const handleSave = () => {
-    if (draft.name.trim().length === 0) return
+  // Returns whether the write actually landed, so the modal can show a real
+  // success/failure state instead of an optimistic checkmark that plays
+  // regardless of what happened. Closing the modal is the modal's own call
+  // (it does so via onCancel once it's shown the success state) — this just
+  // does the write.
+  const handleSave = async () => {
+    if (draft.name.trim().length === 0) return false
     const subItems = draft.subItems
       .filter((sub) => sub.name.trim().length > 0)
       .map((sub) => ({
@@ -636,36 +641,36 @@ function FoodBook({
           })),
       }))
     captureRects()
-    if (editingId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                name: draft.name.trim(),
-                imageUrl: draft.imageUrl,
-                weight: toNumber(draft.weight),
-                protein: toNumber(draft.protein),
-                calories: toNumber(draft.calories),
-                subItems,
-              }
-            : item,
-        ),
-      )
-    } else {
-      const newItem: FoodItem = {
-        id: activeId ?? generateId(),
-        name: draft.name.trim(),
-        imageUrl: draft.imageUrl,
-        weight: toNumber(draft.weight),
-        protein: toNumber(draft.protein),
-        calories: toNumber(draft.calories),
-        createdAt: Date.now(),
-        subItems,
-      }
-      setItems((prev) => [newItem, ...prev])
-    }
-    closeModal()
+    const result = editingId
+      ? await setItems((prev) =>
+          prev.map((item) =>
+            item.id === editingId
+              ? {
+                  ...item,
+                  name: draft.name.trim(),
+                  imageUrl: draft.imageUrl,
+                  weight: toNumber(draft.weight),
+                  protein: toNumber(draft.protein),
+                  calories: toNumber(draft.calories),
+                  subItems,
+                }
+              : item,
+          ),
+        )
+      : await setItems((prev) => [
+          {
+            id: activeId ?? generateId(),
+            name: draft.name.trim(),
+            imageUrl: draft.imageUrl,
+            weight: toNumber(draft.weight),
+            protein: toNumber(draft.protein),
+            calories: toNumber(draft.calories),
+            createdAt: Date.now(),
+            subItems,
+          },
+          ...prev,
+        ])
+    return result.ok
   }
 
   const deleteItem = (id: string) => {

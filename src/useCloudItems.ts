@@ -59,16 +59,27 @@ export function useCloudItems(uid: string) {
     return unsubscribe
   }, [uid])
 
+  // Resolves with { ok: false } on a real write failure (permission denied,
+  // quota, etc.) so callers that care — e.g. the save button's success state
+  // — can tell that apart from being merely offline. Never rejects: callers
+  // that fire-and-forget (selection toggles, drag reorder, ...) can keep
+  // ignoring the returned promise exactly as they ignored the old void return.
   const setItems = useCallback(
-    (next: FoodItem[] | ((prev: FoodItem[]) => FoodItem[])) => {
-      setItemsState((prev) => {
-        const resolved = typeof next === 'function' ? (next as (prev: FoodItem[]) => FoodItem[])(prev) : next
-        writeLocalCache(resolved)
-        setDoc(itemsDocRef(uid), { items: resolved }).catch(() => {
-          // offline — local cache holds the latest state; the Firestore
-          // listener will resync once the connection comes back.
+    (next: FoodItem[] | ((prev: FoodItem[]) => FoodItem[])): Promise<{ ok: boolean }> => {
+      return new Promise((resolve) => {
+        setItemsState((prev) => {
+          const resolved = typeof next === 'function' ? (next as (prev: FoodItem[]) => FoodItem[])(prev) : next
+          writeLocalCache(resolved)
+          setDoc(itemsDocRef(uid), { items: resolved }).then(
+            () => resolve({ ok: true }),
+            (err) => {
+              // Offline writes queue locally and resync once reconnected —
+              // that's still a success. Anything else is a real failure.
+              resolve({ ok: err?.code === 'unavailable' })
+            },
+          )
+          return resolved
         })
-        return resolved
       })
     },
     [uid],
