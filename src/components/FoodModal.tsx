@@ -597,13 +597,15 @@ export function FoodModal({
                       >
                         <GripVertical size={14} />
                       </button>
-                      <input
-                        type="checkbox"
-                        className="sub-item-checkbox"
-                        aria-label={sub.selected ? '取消計入加總' : '計入加總'}
-                        checked={sub.selected}
-                        onChange={(e) => selectSubItem(sub.id, e.target.checked)}
-                      />
+                      <label className="checkbox-tap-area">
+                        <input
+                          type="checkbox"
+                          className="sub-item-checkbox"
+                          aria-label={sub.selected ? '取消計入加總' : '計入加總'}
+                          checked={sub.selected}
+                          onChange={(e) => selectSubItem(sub.id, e.target.checked)}
+                        />
+                      </label>
                       <input
                         className="input"
                         value={sub.name}
@@ -633,36 +635,45 @@ export function FoodModal({
                       </button>
                     </div>
                     <div className="sub-item-row-numbers">
-                      <input
-                        className="input"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        value={subTotals.hasIngredients ? subTotals.weight : sub.weight}
-                        disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { weight: clampNonNegative(e.target.value) })}
-                        placeholder={subTotals.qty !== 1 ? '每份重量 (g)' : '重量 (g)'}
-                      />
-                      <input
-                        className="input"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        value={subTotals.hasIngredients ? subTotals.calories : sub.calories}
-                        disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { calories: clampNonNegative(e.target.value) })}
-                        placeholder={subTotals.qty !== 1 ? '每份熱量 (kcal)' : '熱量 (kcal)'}
-                      />
-                      <input
-                        className="input"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        value={subTotals.hasIngredients ? subTotals.protein : sub.protein}
-                        disabled={subTotals.hasIngredients}
-                        onChange={(e) => updateSubItem(sub.id, { protein: clampNonNegative(e.target.value) })}
-                        placeholder={subTotals.qty !== 1 ? '每份蛋白質 (g)' : '蛋白質 (g)'}
-                      />
+                      <div className="input-unit-field">
+                        <input
+                          className="input"
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          value={subTotals.hasIngredients ? subTotals.weight : sub.weight}
+                          disabled={subTotals.hasIngredients}
+                          onChange={(e) => updateSubItem(sub.id, { weight: clampNonNegative(e.target.value) })}
+                          placeholder={subTotals.qty !== 1 ? '每份重量' : '重量'}
+                        />
+                        <span className="input-unit">g</span>
+                      </div>
+                      <div className="input-unit-field">
+                        <input
+                          className="input"
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          value={subTotals.hasIngredients ? subTotals.calories : sub.calories}
+                          disabled={subTotals.hasIngredients}
+                          onChange={(e) => updateSubItem(sub.id, { calories: clampNonNegative(e.target.value) })}
+                          placeholder={subTotals.qty !== 1 ? '每份熱量' : '熱量'}
+                        />
+                        <span className="input-unit">kcal</span>
+                      </div>
+                      <div className="input-unit-field">
+                        <input
+                          className="input"
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          value={subTotals.hasIngredients ? subTotals.protein : sub.protein}
+                          disabled={subTotals.hasIngredients}
+                          onChange={(e) => updateSubItem(sub.id, { protein: clampNonNegative(e.target.value) })}
+                          placeholder={subTotals.qty !== 1 ? '每份蛋白質' : '蛋白質'}
+                        />
+                        <span className="input-unit">g</span>
+                      </div>
                     </div>
                     {subTotals.qty !== 1 && (
                       <div className="sub-item-qty-hint">
@@ -688,13 +699,15 @@ export function FoodModal({
                           {sub.ingredients!.map((ing) => (
                             <div className={`ingredient-row${ing.selected ? '' : ' is-excluded'}`} key={ing.id}>
                               <div className="ingredient-row-top">
-                                <input
-                                  type="checkbox"
-                                  className="sub-item-checkbox"
-                                  aria-label={ing.selected ? '取消計入加總' : '計入加總'}
-                                  checked={ing.selected}
-                                  onChange={(e) => selectIngredient(sub.id, ing.id, e.target.checked)}
-                                />
+                                <label className="checkbox-tap-area">
+                                  <input
+                                    type="checkbox"
+                                    className="sub-item-checkbox"
+                                    aria-label={ing.selected ? '取消計入加總' : '計入加總'}
+                                    checked={ing.selected}
+                                    onChange={(e) => selectIngredient(sub.id, ing.id, e.target.checked)}
+                                  />
+                                </label>
                                 <input
                                   className="input"
                                   value={ing.name}
@@ -711,39 +724,48 @@ export function FoodModal({
                                 </button>
                               </div>
                               <div className="ingredient-row-numbers">
-                                <input
-                                  className="input"
-                                  type="number"
-                                  inputMode="decimal"
-                                  min="0"
-                                  value={ing.weight}
-                                  onChange={(e) =>
-                                    updateIngredient(sub.id, ing.id, { weight: clampNonNegative(e.target.value) })
-                                  }
-                                  placeholder="重量 (g)"
-                                />
-                                <input
-                                  className="input"
-                                  type="number"
-                                  inputMode="decimal"
-                                  min="0"
-                                  value={ing.calories}
-                                  onChange={(e) =>
-                                    updateIngredient(sub.id, ing.id, { calories: clampNonNegative(e.target.value) })
-                                  }
-                                  placeholder="熱量 (kcal)"
-                                />
-                                <input
-                                  className="input"
-                                  type="number"
-                                  inputMode="decimal"
-                                  min="0"
-                                  value={ing.protein}
-                                  onChange={(e) =>
-                                    updateIngredient(sub.id, ing.id, { protein: clampNonNegative(e.target.value) })
-                                  }
-                                  placeholder="蛋白質 (g)"
-                                />
+                                <div className="input-unit-field">
+                                  <input
+                                    className="input"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    value={ing.weight}
+                                    onChange={(e) =>
+                                      updateIngredient(sub.id, ing.id, { weight: clampNonNegative(e.target.value) })
+                                    }
+                                    placeholder="重量"
+                                  />
+                                  <span className="input-unit">g</span>
+                                </div>
+                                <div className="input-unit-field">
+                                  <input
+                                    className="input"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    value={ing.calories}
+                                    onChange={(e) =>
+                                      updateIngredient(sub.id, ing.id, { calories: clampNonNegative(e.target.value) })
+                                    }
+                                    placeholder="熱量"
+                                  />
+                                  <span className="input-unit">kcal</span>
+                                </div>
+                                <div className="input-unit-field">
+                                  <input
+                                    className="input"
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    value={ing.protein}
+                                    onChange={(e) =>
+                                      updateIngredient(sub.id, ing.id, { protein: clampNonNegative(e.target.value) })
+                                    }
+                                    placeholder="蛋白質"
+                                  />
+                                  <span className="input-unit">g</span>
+                                </div>
                               </div>
                             </div>
                           ))}
