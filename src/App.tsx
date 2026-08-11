@@ -60,7 +60,12 @@ function FoodBook({
   signInError: boolean
 }) {
   const [items, setItems, itemsLoading] = useCloudItems(OWNER_UID)
-  const { overrides: guestOverrides, toggle: toggleGuestSubItem } = useGuestOverrides()
+  const {
+    overrides: guestOverrides,
+    ingredientOverrides: guestIngredientOverrides,
+    setQty: setGuestSubItemQty,
+    toggleIngredient: toggleGuestIngredient,
+  } = useGuestOverrides()
   const { confirm, confirmDialogProps } = useConfirm()
   useTheme()
   const [search, setSearch] = useState('')
@@ -87,6 +92,13 @@ function FoodBook({
   // latest one and apply it when the user backs out, rather than writing to
   // Firestore on every tap inside the iframe.
   const subwayResultRef = useRef<SubwayResult | null>(null)
+
+  // Guests can't write the Subway card's subItems to the shared record, so
+  // their build lives here instead — folded into the card/totals below,
+  // same as guestOverrides, but for a computed value rather than a toggle.
+  const [guestSubwayItem, setGuestSubwayItem] = useState<{ name: string; protein: number; calories: number } | null>(
+    null,
+  )
 
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
@@ -126,9 +138,35 @@ function FoodBook({
             : item,
         ),
       )
+    } else {
+      setGuestSubwayItem({ name: result.mainName!, protein: result.protein ?? 0, calories: result.kcal ?? 0 })
     }
     setSelectedIds((prev) => new Set(prev).add(subwayItem.id))
   }
+
+  // Guest-only view of `items` with the Subway card's build swapped in —
+  // never written back, so it disappears on reload like the rest of a
+  // guest's local state.
+  const displayItems = useMemo(() => {
+    if (isOwner || !guestSubwayItem) return items
+    return items.map((item) =>
+      item.name === SUBWAY_ITEM_NAME
+        ? {
+            ...item,
+            subItems: [
+              {
+                id: item.subItems?.[0]?.id ?? 'guest-subway',
+                name: guestSubwayItem.name,
+                weight: 0,
+                protein: guestSubwayItem.protein,
+                calories: guestSubwayItem.calories,
+                selected: true,
+              },
+            ],
+          }
+        : item,
+    )
+  }, [items, isOwner, guestSubwayItem])
 
   const closeSubway = () => {
     if (subwayClosing) return
@@ -142,15 +180,15 @@ function FoodBook({
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return items
-    return items.filter((item) => {
+    if (!q) return displayItems
+    return displayItems.filter((item) => {
       if (item.name.toLowerCase().includes(q)) return true
       return (item.subItems ?? []).some((sub) => {
         if (sub.name.toLowerCase().includes(q)) return true
         return (sub.ingredients ?? []).some((ing) => ing.name.toLowerCase().includes(q))
       })
     })
-  }, [items, search])
+  }, [displayItems, search])
 
   const reorderEnabled = isOwner && search.trim().length === 0
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -352,14 +390,18 @@ function FoodBook({
   }, [handlePointerMove, handlePointerUp, stopSpringLoop])
 
   const selectedItems = useMemo(
-    () => items.filter((item) => selectedIds.has(item.id)),
-    [items, selectedIds],
+    () => displayItems.filter((item) => selectedIds.has(item.id)),
+    [displayItems, selectedIds],
   )
   const totals = useMemo(
     () =>
       selectedItems.reduce(
         (acc, item) => {
-          const itemTotals = getFoodTotals(item, isOwner ? undefined : guestOverrides[item.id])
+          const itemTotals = getFoodTotals(
+            item,
+            isOwner ? undefined : guestOverrides[item.id],
+            isOwner ? undefined : guestIngredientOverrides[item.id],
+          )
           return {
             weight: acc.weight + itemTotals.weight,
             protein: acc.protein + itemTotals.protein,
@@ -368,7 +410,7 @@ function FoodBook({
         },
         { weight: 0, protein: 0, calories: 0 },
       ),
-    [selectedItems, isOwner, guestOverrides],
+    [selectedItems, isOwner, guestOverrides, guestIngredientOverrides],
   )
 
   const toggleSelect = (id: string) => {
@@ -395,7 +437,9 @@ function FoodBook({
   const selectAll = () => setSelectedIds(new Set(filteredItems.map((item) => item.id)))
 
   const copySelectedAsText = () => {
-    navigator.clipboard.writeText(formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides))
+    navigator.clipboard.writeText(
+      formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides, isOwner ? undefined : guestIngredientOverrides),
+    )
   }
 
   useEffect(() => {
@@ -511,6 +555,7 @@ function FoodBook({
         weight: String(ing.weight),
         protein: String(ing.protein),
         calories: String(ing.calories),
+        selected: ing.selected !== false,
       })),
     }))
     // Legacy records may still carry their own base numbers alongside sub-items;
@@ -559,26 +604,9 @@ function FoodBook({
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, imageUrl: url } : item)))
   }
 
-  const toggleSubItemSelected = (id: string, subId: string) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item
-        const subItems = item.subItems ?? []
-        return {
-          ...item,
-          subItems: subItems.map((sub) =>
-            sub.id === subId ? { ...sub, selected: sub.selected === false } : sub,
-          ),
-        }
-      }),
-    )
-  }
-
-  // Quick-pick from the card's qty chip menu (owner only — guests only ever
-  // get the plain include/exclude toggle below). qty 0 excludes the sub-item
-  // but keeps its stored qty, so re-including it restores the prior count.
+  // qty 0 excludes the sub-item but keeps its stored qty, so re-including it
+  // restores the prior count.
   const setSubItemQty = (id: string, subId: string, qty: number) => {
-    if (!isOwner) return
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
@@ -593,28 +621,53 @@ function FoodBook({
     )
   }
 
-  // Sub-items are only ever created via the edit modal — this sheet-side
-  // action can only remove one, never add.
-  const removeSubItem = async (id: string, subId: string) => {
-    if (!isOwner) return
-    if (!(await confirm('確定要刪除這個子項目嗎？'))) return
+  // Toggles one nested ingredient (e.g. "麵包一片" left off a burger) without
+  // touching its sub-item's own qty/selected.
+  const toggleIngredientSelected = (id: string, subId: string, ingredientId: string) => {
     setItems((prev) =>
-      prev.map((item) =>
-        item.id !== id ? item : { ...item, subItems: (item.subItems ?? []).filter((sub) => sub.id !== subId) },
-      ),
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const subItems = item.subItems ?? []
+        return {
+          ...item,
+          subItems: subItems.map((sub) =>
+            sub.id !== subId
+              ? sub
+              : {
+                  ...sub,
+                  ingredients: (sub.ingredients ?? []).map((ing) =>
+                    ing.id === ingredientId ? { ...ing, selected: ing.selected === false } : ing,
+                  ),
+                },
+          ),
+        }
+      }),
     )
   }
 
   // Owner edits write straight to the shared record; guests can't write there,
-  // so their taps flip a local-only override instead (see useGuestOverrides).
-  const handleToggleSubItem = (id: string, subId: string) => {
+  // so their qty changes flip a local-only override instead (see useGuestOverrides).
+  const handleSetSubItemQty = (id: string, subId: string, qty: number) => {
     if (isOwner) {
-      toggleSubItemSelected(id, subId)
+      setSubItemQty(id, subId, qty)
       return
     }
-    const sub = items.find((item) => item.id === id)?.subItems?.find((s) => s.id === subId)
-    if (!sub) return
-    toggleGuestSubItem(id, subId, sub.selected !== false)
+    setGuestSubItemQty(id, subId, qty)
+  }
+
+  // Owner edits write straight to the shared record; guests can't write there,
+  // so their ingredient taps flip a local-only override instead (see useGuestOverrides).
+  const handleToggleIngredient = (id: string, subId: string, ingredientId: string) => {
+    if (isOwner) {
+      toggleIngredientSelected(id, subId, ingredientId)
+      return
+    }
+    const ing = items
+      .find((item) => item.id === id)
+      ?.subItems?.find((sub) => sub.id === subId)
+      ?.ingredients?.find((i) => i.id === ingredientId)
+    if (!ing) return
+    toggleGuestIngredient(id, ingredientId, ing.selected !== false)
   }
 
   // Returns whether the write actually landed, so the modal can show a real
@@ -642,6 +695,7 @@ function FoodBook({
             weight: toNumber(ing.weight),
             protein: toNumber(ing.protein),
             calories: toNumber(ing.calories),
+            selected: ing.selected,
           })),
       }))
     captureRects()
@@ -818,11 +872,11 @@ function FoodBook({
                   isCalculatorLink={item.name === SUBWAY_ITEM_NAME}
                   onToggle={handleCardToggle}
                   onEdit={openEditModal}
-                  onToggleSubItem={handleToggleSubItem}
-                  onSetSubItemQty={setSubItemQty}
-                  onRemoveSubItem={removeSubItem}
+                  onSetSubItemQty={handleSetSubItemQty}
+                  onToggleIngredient={handleToggleIngredient}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}
+                  guestIngredientOverrides={isOwner ? undefined : guestIngredientOverrides[item.id]}
                 />
               ))}
             </div>

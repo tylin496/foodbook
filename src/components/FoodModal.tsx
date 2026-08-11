@@ -165,7 +165,14 @@ export function FoodModal({
     const sub = draft.subItems.find((s) => s.id === subId)
     if (!sub) return
     const ingredients = sub.ingredients ?? []
-    const newIngredient: FoodIngredientDraft = { id: generateId(), name: '', weight: '', protein: '', calories: '' }
+    const newIngredient: FoodIngredientDraft = {
+      id: generateId(),
+      name: '',
+      weight: '',
+      protein: '',
+      calories: '',
+      selected: true,
+    }
 
     // First ingredient: split the sub-item's own manually-entered numbers out
     // into their own row, mirroring how the top-level fields split for sub-items.
@@ -179,6 +186,7 @@ export function FoodModal({
         weight: sub.weight,
         protein: sub.protein,
         calories: sub.calories,
+        selected: true,
       }
       updateSubItem(subId, {
         weight: '0',
@@ -200,6 +208,23 @@ export function FoodModal({
     })
   }
 
+  const selectIngredient = (subId: string, ingredientId: string, selected: boolean) => {
+    const sub = draft.subItems.find((s) => s.id === subId)
+    if (!sub) return
+    const ingredients = sub.ingredients ?? []
+    if (!selected) {
+      // Mirrors selectSubItem: unchecking drops the row to the bottom of the
+      // list instead of leaving it in place, so active ingredients stay
+      // grouped at the top.
+      const target = ingredients.find((ing) => ing.id === ingredientId)
+      if (!target) return
+      const rest = ingredients.filter((ing) => ing.id !== ingredientId)
+      updateSubItem(subId, { ingredients: [...rest, { ...target, selected }] })
+      return
+    }
+    updateIngredient(subId, ingredientId, { selected })
+  }
+
   const removeIngredient = async (subId: string, ingredientId: string) => {
     const sub = draft.subItems.find((s) => s.id === subId)
     if (!sub) return
@@ -216,11 +241,14 @@ export function FoodModal({
 
   const subItemTotals = (sub: FoodSubItemDraft) => {
     const ingredients = sub.ingredients ?? []
+    const countedIngredients = ingredients.filter((ing) => ing.selected !== false)
     const hasIngredients = ingredients.length > 0
     const qty = toNumber(sub.qty) || 1
-    const baseWeight = toNumber(sub.weight) + ingredients.reduce((sum, ing) => sum + toNumber(ing.weight), 0)
-    const baseCalories = toNumber(sub.calories) + ingredients.reduce((sum, ing) => sum + toNumber(ing.calories), 0)
-    const baseProtein = toNumber(sub.protein) + ingredients.reduce((sum, ing) => sum + toNumber(ing.protein), 0)
+    const baseWeight = toNumber(sub.weight) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.weight), 0)
+    const baseCalories =
+      toNumber(sub.calories) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.calories), 0)
+    const baseProtein =
+      toNumber(sub.protein) + countedIngredients.reduce((sum, ing) => sum + toNumber(ing.protein), 0)
     return {
       hasIngredients,
       qty,
@@ -475,7 +503,7 @@ export function FoodModal({
 
         <div className="number-fields">
           <div className="field">
-            <label htmlFor="food-calories">熱量 (kcal){hasSubItems && '・自動加總'}</label>
+            <label htmlFor="food-calories">熱量 (kcal){hasSubItems && ' 自動加總'}</label>
             <input
               id="food-calories"
               className="input"
@@ -489,7 +517,7 @@ export function FoodModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="food-protein">蛋白質 (g){hasSubItems && '・自動加總'}</label>
+            <label htmlFor="food-protein">蛋白質 (g){hasSubItems && ' 自動加總'}</label>
             <input
               id="food-protein"
               className="input"
@@ -503,7 +531,7 @@ export function FoodModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="food-weight">重量 (g){hasSubItems && '・自動加總'}</label>
+            <label htmlFor="food-weight">重量 (g){hasSubItems && ' 自動加總'}</label>
             <input
               id="food-weight"
               className="input"
@@ -523,7 +551,7 @@ export function FoodModal({
             {preview ? <img src={preview} alt="食物照片預覽" /> : <Camera size={18} strokeWidth={1.8} />}
           </div>
           <span className="photo-upload-label">
-            {uploading ? '上傳中…' : preview ? '更換照片' : '加一張照片・選填'}
+            {uploading ? '上傳中…' : preview ? '更換照片' : '加一張照片 選填'}
           </span>
           <input
             ref={fileInputRef}
@@ -547,7 +575,7 @@ export function FoodModal({
         <div className="sub-items-section">
           {hasSubItems ? (
             <div className="sub-items-header">
-              <span>子項目・勾選要計入加總的項目</span>
+              <span>子項目 勾選要計入加總的項目</span>
               <button type="button" className="btn-ghost btn-add-subitem" onClick={addSubItem}>
                 <Plus size={14} />
                 新增子項目
@@ -651,14 +679,14 @@ export function FoodModal({
                     </div>
                     {subTotals.qty !== 1 && (
                       <div className="sub-item-qty-hint">
-                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g・
-                        {formatAmount(subTotals.calories)}kcal・{formatAmount(subTotals.protein)}g
+                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g
+                        {formatAmount(subTotals.calories)}kcal {formatAmount(subTotals.protein)}g
                       </div>
                     )}
 
                     <div className="ingredients-section">
                       <div className="ingredients-header">
-                        <span>成分・一定計入{sub.name.trim() || '此項目'}</span>
+                        <span>成分 勾選要計入加總的項目</span>
                         <button
                           type="button"
                           className="btn-ghost btn-add-ingredient"
@@ -671,8 +699,15 @@ export function FoodModal({
                       {(sub.ingredients?.length ?? 0) > 0 && (
                         <div className="ingredients">
                           {sub.ingredients!.map((ing) => (
-                            <div className="ingredient-row" key={ing.id}>
+                            <div className={`ingredient-row${ing.selected ? '' : ' is-excluded'}`} key={ing.id}>
                               <div className="ingredient-row-top">
+                                <input
+                                  type="checkbox"
+                                  className="sub-item-checkbox"
+                                  aria-label={ing.selected ? '取消計入加總' : '計入加總'}
+                                  checked={ing.selected}
+                                  onChange={(e) => selectIngredient(sub.id, ing.id, e.target.checked)}
+                                />
                                 <input
                                   className="input"
                                   value={ing.name}

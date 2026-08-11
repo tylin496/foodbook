@@ -1,12 +1,14 @@
 // An ingredient nested under a sub-item — a fixed component (like "鐵板麵"
-// belonging to "沙朗牛排") that's always counted whenever its parent is, so it
-// carries no selected flag of its own.
+// belonging to "沙朗牛排"). Counted whenever its parent is, unless individually
+// excluded (e.g. "麵包一片" left off a burger for one meal) — missing/undefined
+// `selected` means counted, mirroring FoodSubItem.
 export interface FoodIngredient {
   id: string
   name: string
   weight: number
   protein: number
   calories: number
+  selected?: boolean
 }
 
 export interface FoodSubItem {
@@ -40,6 +42,7 @@ export type FoodIngredientDraft = {
   weight: string
   protein: string
   calories: string
+  selected: boolean
 }
 
 export type FoodSubItemDraft = {
@@ -71,34 +74,63 @@ export const emptyDraft: FoodDraft = {
   subItems: [],
 }
 
-// A guest's local sub-item toggles never touch the shared record — this is the
-// per-item override map (subId -> selected) layered on top of it for display/totals.
-export type SubItemOverrides = Record<string, boolean>
+// A guest's local sub-item qty changes never touch the shared record — this is
+// the per-item override map (subId -> qty) layered on top of it for display/totals.
+// A qty of 0 means excluded, mirroring how the owner's own qty field works.
+export type SubItemOverrides = Record<string, number>
 
-export function isSubItemSelected(sub: FoodSubItem, overrides?: SubItemOverrides): boolean {
-  return (overrides?.[sub.id] ?? sub.selected) !== false
+export function getEffectiveSubItemQty(sub: FoodSubItem, overrides?: SubItemOverrides): number {
+  const overrideQty = overrides?.[sub.id]
+  if (overrideQty !== undefined) return overrideQty
+  return sub.selected === false ? 0 : (sub.qty ?? 1)
 }
 
-function sumIngredients(ingredients?: FoodIngredient[]): {
+export function isSubItemSelected(sub: FoodSubItem, overrides?: SubItemOverrides): boolean {
+  return getEffectiveSubItemQty(sub, overrides) > 0
+}
+
+// A guest's local ingredient exclusions never touch the shared record — this
+// is the per-item override map (ingredientId -> selected) layered on top of
+// it for display/totals, mirroring SubItemOverrides.
+export type IngredientOverrides = Record<string, boolean>
+
+export function isIngredientSelected(ing: FoodIngredient, overrides?: IngredientOverrides): boolean {
+  const override = overrides?.[ing.id]
+  if (override !== undefined) return override
+  return ing.selected !== false
+}
+
+function sumIngredients(
+  ingredients: FoodIngredient[] | undefined,
+  overrides?: IngredientOverrides,
+): {
   weight: number
   protein: number
   calories: number
 } {
-  return (ingredients ?? []).reduce(
-    (acc, ing) => ({
-      weight: acc.weight + ing.weight,
-      protein: acc.protein + ing.protein,
-      calories: acc.calories + ing.calories,
-    }),
-    { weight: 0, protein: 0, calories: 0 },
-  )
+  return (ingredients ?? [])
+    .filter((ing) => isIngredientSelected(ing, overrides))
+    .reduce(
+      (acc, ing) => ({
+        weight: acc.weight + ing.weight,
+        protein: acc.protein + ing.protein,
+        calories: acc.calories + ing.calories,
+      }),
+      { weight: 0, protein: 0, calories: 0 },
+    )
 }
 
 // A sub-item's own total folds in its ingredients — excluding the sub-item
-// (via selected/overrides) drops its ingredients along with it.
-export function getSubItemTotals(sub: FoodSubItem): { weight: number; protein: number; calories: number } {
-  const ingredientTotals = sumIngredients(sub.ingredients)
-  const qty = sub.qty ?? 1
+// (qty 0) drops its ingredients along with it. `qtyOverride` lets callers
+// (e.g. the guest-facing sheet) price out a qty that hasn't been committed
+// to `sub.qty` yet.
+export function getSubItemTotals(
+  sub: FoodSubItem,
+  qtyOverride?: number,
+  ingredientOverrides?: IngredientOverrides,
+): { weight: number; protein: number; calories: number } {
+  const ingredientTotals = sumIngredients(sub.ingredients, ingredientOverrides)
+  const qty = qtyOverride ?? sub.qty ?? 1
   return {
     weight: (sub.weight + ingredientTotals.weight) * qty,
     protein: (sub.protein + ingredientTotals.protein) * qty,
@@ -109,11 +141,14 @@ export function getSubItemTotals(sub: FoodSubItem): { weight: number; protein: n
 export function getFoodTotals(
   item: FoodItem,
   overrides?: SubItemOverrides,
+  ingredientOverrides?: IngredientOverrides,
 ): { weight: number; protein: number; calories: number } {
-  const subItems = (item.subItems ?? []).filter((sub) => isSubItemSelected(sub, overrides))
+  const subItems = item.subItems ?? []
   return subItems.reduce(
     (acc, sub) => {
-      const subTotals = getSubItemTotals(sub)
+      const qty = getEffectiveSubItemQty(sub, overrides)
+      if (qty <= 0) return acc
+      const subTotals = getSubItemTotals(sub, qty, ingredientOverrides)
       return {
         weight: acc.weight + subTotals.weight,
         protein: acc.protein + subTotals.protein,

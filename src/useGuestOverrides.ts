@@ -1,36 +1,53 @@
 import { useEffect, useState } from 'react'
-import type { SubItemOverrides } from './types'
+import type { IngredientOverrides, SubItemOverrides } from './types'
 
-// Guests (read-only viewers) can still tap sub-item chips to decide what counts
-// for themselves, but they can't write to the shared record — so their choices
-// live only in this browser's localStorage, layered on top of the real data.
+// Guests (read-only viewers) can still adjust sub-item qty and toggle
+// ingredients for themselves, same as an owner would, but they can't write to
+// the shared record — so their changes live only in this browser's
+// localStorage, layered on top of the real data.
 const STORAGE_KEY = 'foodbook-guest-subitem-overrides'
+const INGREDIENT_STORAGE_KEY = 'foodbook-guest-ingredient-overrides'
 
 type OverrideMap = Record<string, SubItemOverrides>
+type IngredientOverrideMap = Record<string, IngredientOverrides>
 
-function readStored(): OverrideMap {
+function readStored<T>(key: string): T {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as OverrideMap) : {}
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : ({} as T)
   } catch {
-    return {}
+    return {} as T
   }
 }
 
 export function useGuestOverrides() {
-  const [overrides, setOverrides] = useState<OverrideMap>(readStored)
+  const [overrides, setOverrides] = useState<OverrideMap>(() => readStored(STORAGE_KEY))
+  const [ingredientOverrides, setIngredientOverrides] = useState<IngredientOverrideMap>(() =>
+    readStored(INGREDIENT_STORAGE_KEY),
+  )
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides))
   }, [overrides])
 
-  const toggle = (itemId: string, subId: string, baseSelected: boolean) => {
+  useEffect(() => {
+    localStorage.setItem(INGREDIENT_STORAGE_KEY, JSON.stringify(ingredientOverrides))
+  }, [ingredientOverrides])
+
+  const setQty = (itemId: string, subId: string, qty: number) => {
     setOverrides((prev) => {
       const itemOverrides = prev[itemId] ?? {}
-      const current = itemOverrides[subId] ?? baseSelected
-      return { ...prev, [itemId]: { ...itemOverrides, [subId]: !current } }
+      return { ...prev, [itemId]: { ...itemOverrides, [subId]: qty } }
     })
   }
 
-  return { overrides, toggle }
+  const toggleIngredient = (itemId: string, ingredientId: string, baseSelected: boolean) => {
+    setIngredientOverrides((prev) => {
+      const itemOverrides = prev[itemId] ?? {}
+      const current = itemOverrides[ingredientId] ?? baseSelected
+      return { ...prev, [itemId]: { ...itemOverrides, [ingredientId]: !current } }
+    })
+  }
+
+  return { overrides, ingredientOverrides, setQty, toggleIngredient }
 }

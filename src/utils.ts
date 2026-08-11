@@ -1,4 +1,4 @@
-import type { FoodItem, SubItemOverrides } from './types'
+import type { FoodItem, IngredientOverrides, SubItemOverrides } from './types'
 import { getFoodTotals, getSubItemTotals } from './types'
 
 export function formatSubItemName(sub: { name: string; qty?: number }): string {
@@ -28,12 +28,14 @@ export function generateId(): string {
 export function formatItemsAsText(
   items: FoodItem[],
   overridesByItem?: Record<string, SubItemOverrides>,
+  ingredientOverridesByItem?: Record<string, IngredientOverrides>,
 ): string {
   const lines: string[] = []
 
   items.forEach((item, index) => {
     const overrides = overridesByItem?.[item.id]
-    const totals = getFoodTotals(item, overrides)
+    const ingredientOverrides = ingredientOverridesByItem?.[item.id]
+    const totals = getFoodTotals(item, overrides, ingredientOverrides)
 
     lines.push(`${index + 1}. ${item.name}`)
     lines.push(`   重量 ${formatAmount(totals.weight)}g`)

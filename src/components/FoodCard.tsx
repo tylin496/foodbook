@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Calculator, Camera, Check, Pencil } from 'lucide-react'
-import type { FoodItem, SubItemOverrides } from '../types'
+import type { FoodItem, IngredientOverrides, SubItemOverrides } from '../types'
 import { getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { SubItemsSheet } from './SubItemsSheet'
@@ -24,11 +24,11 @@ interface FoodCardProps {
   isCalculatorLink: boolean
   onToggle: (id: string) => void
   onEdit: (id: string) => void
-  onToggleSubItem: (id: string, subId: string) => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
-  onRemoveSubItem: (id: string, subId: string) => void
+  onToggleIngredient: (id: string, subId: string, ingredientId: string) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
   guestOverrides?: SubItemOverrides
+  guestIngredientOverrides?: IngredientOverrides
 }
 
 export function FoodCard({
@@ -42,13 +42,13 @@ export function FoodCard({
   isCalculatorLink,
   onToggle,
   onEdit,
-  onToggleSubItem,
   onSetSubItemQty,
-  onRemoveSubItem,
+  onToggleIngredient,
   onDragHandlePointerDown,
   guestOverrides,
+  guestIngredientOverrides,
 }: FoodCardProps) {
-  const totals = getFoodTotals(item, guestOverrides)
+  const totals = getFoodTotals(item, guestOverrides, guestIngredientOverrides)
   const subItems = item.subItems ?? []
   // Without sub-items the weight itself labels the portion, so it becomes the
   // lone chip instead of being repeated in the meta row.
@@ -80,8 +80,8 @@ export function FoodCard({
   const [visibleChipCount, setVisibleChipCount] = useState(subItems.length)
 
   // Any chip (including "+N") opens the same sheet listing every sub-item on
-  // the card — full stats, ingredients, and (owner only) a quantity picker —
-  // instead of toggling that one chip inline.
+  // the card — full stats, ingredients, and a quantity picker — instead of
+  // toggling that one chip inline.
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sheetClosing, setSheetClosing] = useState(false)
   const sheetCloseTimer = useRef<number | null>(null)
@@ -377,13 +377,12 @@ export function FoodCard({
         <SubItemsSheet
           title={item.name}
           subItems={subItems}
-          readOnly={readOnly}
           guestOverrides={guestOverrides}
+          guestIngredientOverrides={guestIngredientOverrides}
           closing={sheetClosing}
           onClose={closeSheet}
-          onToggle={(subId) => onToggleSubItem(item.id, subId)}
           onSetQty={(subId, qty) => onSetSubItemQty(item.id, subId, qty)}
-          onRemove={(subId) => onRemoveSubItem(item.id, subId)}
+          onToggleIngredient={(subId, ingredientId) => onToggleIngredient(item.id, subId, ingredientId)}
         />
       )}
     </div>

@@ -1,8 +1,8 @@
 import { useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Minus, Plus, Trash2, X } from 'lucide-react'
-import type { FoodSubItem, SubItemOverrides } from '../types'
-import { getSubItemTotals, isSubItemSelected } from '../types'
+import { Minus, Plus, X } from 'lucide-react'
+import type { FoodSubItem, IngredientOverrides, SubItemOverrides } from '../types'
+import { getEffectiveSubItemQty, getSubItemTotals, isIngredientSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { useDialogDismiss } from '../useDialogDismiss'
 import { useFocusTrap } from '../useFocusTrap'
@@ -10,25 +10,23 @@ import { useFocusTrap } from '../useFocusTrap'
 interface SubItemsSheetProps {
   title: string
   subItems: FoodSubItem[]
-  readOnly: boolean
   guestOverrides?: SubItemOverrides
+  guestIngredientOverrides?: IngredientOverrides
   closing: boolean
   onClose: () => void
-  onToggle: (subId: string) => void
   onSetQty: (subId: string, qty: number) => void
-  onRemove: (subId: string) => void
+  onToggleIngredient: (subId: string, ingredientId: string) => void
 }
 
 export function SubItemsSheet({
   title,
   subItems,
-  readOnly,
   guestOverrides,
+  guestIngredientOverrides,
   closing,
   onClose,
-  onToggle,
   onSetQty,
-  onRemove,
+  onToggleIngredient,
 }: SubItemsSheetProps) {
   const backdropProps = useDialogDismiss(onClose)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -53,65 +51,53 @@ export function SubItemsSheet({
 
         <div className="sub-items-sheet-list">
           {subItems.map((sub) => {
-            const selected = isSubItemSelected(sub, guestOverrides)
-            const activeQty = selected ? (sub.qty ?? 1) : 0
-            const totals = getSubItemTotals({ ...sub, qty: activeQty })
+            const activeQty = getEffectiveSubItemQty(sub, guestOverrides)
+            const selected = activeQty > 0
+            const totals = getSubItemTotals(sub, activeQty, guestIngredientOverrides)
             const ingredients = sub.ingredients ?? []
 
             return (
               <div key={sub.id} className={`sub-items-sheet-row${selected ? '' : ' is-excluded'}`}>
                 <div className="sub-items-sheet-row-top">
                   <span className="sub-items-sheet-row-name">{formatSubItemName(sub)}</span>
-                  {readOnly ? (
+                  <div className="sub-item-qty-stepper">
                     <button
                       type="button"
-                      className={`sub-item-detail-toggle${selected ? '' : ' is-excluded'}`}
-                      onClick={() => onToggle(sub.id)}
+                      aria-label="減少數量"
+                      disabled={activeQty <= 0}
+                      onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
                     >
-                      {selected ? '已計入' : '已排除'}
+                      <Minus size={13} />
                     </button>
-                  ) : (
-                    <div className="sub-items-sheet-row-controls">
-                      <div className="sub-item-qty-stepper">
-                        <button
-                          type="button"
-                          aria-label="減少數量"
-                          disabled={activeQty <= 0}
-                          onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
-                        <button
-                          type="button"
-                          aria-label="增加數量"
-                          onClick={() => onSetQty(sub.id, activeQty + 1)}
-                        >
-                          <Plus size={13} />
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        className="sub-items-sheet-row-remove"
-                        aria-label="刪除子項目"
-                        onClick={() => onRemove(sub.id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
+                    <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
+                    <button
+                      type="button"
+                      aria-label="增加數量"
+                      onClick={() => onSetQty(sub.id, activeQty + 1)}
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 {ingredients.length > 0 && (
                   <div className="sub-items-sheet-ingredients">
-                    {ingredients.map((ing) => (
-                      <div className="sub-item-detail-ingredient-row" key={ing.id}>
-                        <span>{ing.name}</span>
-                        <span>
-                          {formatAmount(ing.weight)}g・{formatAmount(ing.calories)}kcal・{formatAmount(ing.protein)}g
-                        </span>
-                      </div>
-                    ))}
+                    {ingredients.map((ing) => {
+                      const ingSelected = isIngredientSelected(ing, guestIngredientOverrides)
+                      return (
+                        <button
+                          type="button"
+                          key={ing.id}
+                          className={`sub-item-detail-ingredient-row${ingSelected ? '' : ' is-excluded'}`}
+                          onClick={() => onToggleIngredient(sub.id, ing.id)}
+                        >
+                          <span>{ing.name}</span>
+                          <span>
+                            {formatAmount(ing.weight)}g・{formatAmount(ing.calories)}kcal・{formatAmount(ing.protein)}g
+                          </span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
 

@@ -822,8 +822,7 @@ body { background: var(--bg); }
 .confirm-dialog .dialog-title { font-size: 16px; }
 
 /* — sub-items sheet — a chip click expands into this, listing every
-   sub-item on the card at once: name, ingredients, and (owner) a quantity
-   picker or (guest) an include/exclude toggle. */
+   sub-item on the card at once: name, ingredients, and a quantity picker. */
 .sub-items-sheet { width: min(420px, 100%); }
 .sub-items-sheet-list {
   display: flex; flex-direction: column; gap: var(--space-3);
@@ -838,17 +837,6 @@ body { background: var(--bg); }
 .sub-items-sheet-row-top {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
 }
-.sub-items-sheet-row-controls { flex: none; display: flex; align-items: center; gap: 6px; }
-.sub-items-sheet-row-remove {
-  all: unset; box-sizing: border-box; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px;
-  border-radius: var(--radius-pill);
-  color: var(--ink-4);
-  transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
-}
-.sub-items-sheet-row-remove:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent); }
-.sub-items-sheet-row-remove:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .sub-items-sheet-row-name {
   font-family: var(--font-ui); font-weight: 600; font-size: 14px; color: var(--ink);
 }
@@ -863,24 +851,21 @@ body { background: var(--bg); }
 }
 .sub-item-detail-ingredient-row {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2);
-  font-size: 13px; color: var(--ink-2);
+  width: 100%;
+  font: inherit; font-size: 13px; color: var(--ink-2);
+  background: none; border: none; padding: 0; margin: 0;
+  cursor: pointer; text-align: left;
 }
 .sub-item-detail-ingredient-row span:last-child {
   flex: none; font-size: 11px; color: var(--ink-4);
 }
+.sub-item-detail-ingredient-row.is-excluded {
+  color: var(--ink-4); opacity: 0.55;
+}
+.sub-item-detail-ingredient-row.is-excluded span:last-child {
+  color: var(--ink-4);
+}
 .sub-items-sheet-row-stats { font-size: 11px; color: var(--ink-4); }
-.sub-item-detail-toggle {
-  all: unset; box-sizing: border-box; cursor: pointer; text-align: center;
-  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
-  color: var(--color-surface); background: var(--color-accent);
-  padding: 6px 10px; border-radius: var(--radius-sm);
-  white-space: nowrap;
-}
-.sub-item-detail-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.sub-item-detail-toggle.is-excluded {
-  color: var(--ink-2); background: transparent;
-  box-shadow: inset 0 0 0 1px var(--off-ring);
-}
 
 /* — floating selection summary bar — Liquid Glass capsule — */
 .selection-bar {
@@ -1020,7 +1005,7 @@ body { background: var(--bg); }
   display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: var(--space-3);
 }
 .number-fields .field > label {
-  /* the narrower weight column can't fit "重量 (g)・自動加總" at the default
+  /* the narrower weight column can't fit "重量 (g) 自動加總" at the default
      label size — it wraps and pushes just that input out of alignment with
      the other two columns. */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px;
