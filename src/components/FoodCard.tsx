@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Calculator, Camera, Check, Pencil } from 'lucide-react'
 import type { FoodItem, IngredientOverrides, SubItemOverrides } from '../types'
-import { getEffectiveSubItemQty, getFoodTotals, isSubItemSelected } from '../types'
+import { getEffectiveBaseQty, getEffectiveSubItemQty, getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { SubItemsSheet } from './SubItemsSheet'
 
@@ -26,6 +26,7 @@ interface FoodCardProps {
   onOpenCalculator?: () => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
   onSetIngredientQty: (id: string, subId: string, ingredientId: string, qty: number) => void
+  onSetBaseQty: (id: string, qty: number) => void
   onReorderIngredients?: (id: string, subId: string, orderedIngredientIds: string[]) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
   guestOverrides?: SubItemOverrides
@@ -46,6 +47,7 @@ export function FoodCard({
   onOpenCalculator,
   onSetSubItemQty,
   onSetIngredientQty,
+  onSetBaseQty,
   onReorderIngredients,
   onDragHandlePointerDown,
   guestOverrides,
@@ -396,6 +398,7 @@ export function FoodCard({
           title={item.name}
           subItems={subItems}
           totals={totals}
+          baseQty={getEffectiveBaseQty(item, guestOverrides)}
           guestOverrides={guestOverrides}
           guestIngredientOverrides={guestIngredientOverrides}
           closing={sheetClosing}
@@ -403,6 +406,10 @@ export function FoodCard({
           onSetQty={(subId, qty) => {
             sheetChangedRef.current = true
             onSetSubItemQty(item.id, subId, qty)
+          }}
+          onSetBaseQty={(qty) => {
+            sheetChangedRef.current = true
+            onSetBaseQty(item.id, qty)
           }}
           onSetIngredientQty={(subId, ingredientId, qty) => {
             sheetChangedRef.current = true

@@ -38,6 +38,10 @@ export interface FoodItem {
   calories: number
   createdAt: number
   subItems?: FoodSubItem[]
+  // How many portions of the item's own weight/protein/calories were
+  // consumed — mirrors FoodSubItem.qty, but for the item itself rather than
+  // one of its sub-items. Missing/undefined means 1.
+  qty?: number
 }
 
 export type FoodIngredientDraft = {
@@ -82,12 +86,26 @@ export const emptyDraft: FoodDraft = {
 // A guest's local sub-item qty changes never touch the shared record — this is
 // the per-item override map (subId -> qty) layered on top of it for display/totals.
 // A qty of 0 means excluded, mirroring how the owner's own qty field works.
+// The item's own base qty (see FoodItem.qty) rides along in the same map under
+// this sentinel key, since it's scoped per-item exactly like every subId here
+// and a real subId can't collide with it.
+export const BASE_QTY_KEY = '__item__'
+
 export type SubItemOverrides = Record<string, number>
 
 export function getEffectiveSubItemQty(sub: FoodSubItem, overrides?: SubItemOverrides): number {
   const overrideQty = overrides?.[sub.id]
   if (overrideQty !== undefined) return overrideQty
   return sub.selected === false ? 0 : (sub.qty ?? 1)
+}
+
+// The item's own portions, e.g. ordering 2x steak — unlike a sub-item this
+// can't drop to 0 (excluding the whole item is the card's own checkbox), so
+// callers should floor it at 1.
+export function getEffectiveBaseQty(item: FoodItem, overrides?: SubItemOverrides): number {
+  const overrideQty = overrides?.[BASE_QTY_KEY]
+  if (overrideQty !== undefined) return overrideQty
+  return item.qty ?? 1
 }
 
 export function isSubItemSelected(sub: FoodSubItem, overrides?: SubItemOverrides): boolean {
@@ -155,6 +173,7 @@ export function getFoodTotals(
   ingredientOverrides?: IngredientOverrides,
 ): { weight: number; protein: number; calories: number } {
   const subItems = item.subItems ?? []
+  const baseQty = getEffectiveBaseQty(item, overrides)
   return subItems.reduce(
     (acc, sub) => {
       const qty = getEffectiveSubItemQty(sub, overrides)
@@ -166,6 +185,6 @@ export function getFoodTotals(
         calories: acc.calories + subTotals.calories,
       }
     },
-    { weight: item.weight, protein: item.protein, calories: item.calories },
+    { weight: item.weight * baseQty, protein: item.protein * baseQty, calories: item.calories * baseQty },
   )
 }

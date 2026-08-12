@@ -5,7 +5,7 @@ import { useTheme } from './useTheme'
 import { useCloudItems } from './useCloudItems'
 import { useGuestOverrides } from './useGuestOverrides'
 import type { FoodDraft } from './types'
-import { emptyDraft, getEffectiveSubItemQty, getFoodTotals } from './types'
+import { BASE_QTY_KEY, emptyDraft, getEffectiveSubItemQty, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
@@ -656,6 +656,17 @@ function FoodBook({
     setGuestSubItemQty(id, subId, qty)
   }
 
+  // The item's own qty (see FoodItem.qty) can't drop below 1 — excluding the
+  // whole item is the card's own checkbox, not this stepper.
+  const handleSetBaseQty = (id: string, qty: number) => {
+    const clamped = Math.max(1, qty)
+    if (isOwner) {
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, qty: clamped } : item)))
+      return
+    }
+    setGuestSubItemQty(id, BASE_QTY_KEY, clamped)
+  }
+
   // Owner edits write straight to the shared record; guests can't write there,
   // so their ingredient qty changes flip a local-only override instead (see useGuestOverrides).
   const handleSetIngredientQty = (id: string, subId: string, ingredientId: string, qty: number) => {
@@ -914,6 +925,7 @@ function FoodBook({
                   onEdit={openEditModal}
                   onSetSubItemQty={handleSetSubItemQty}
                   onSetIngredientQty={handleSetIngredientQty}
+                  onSetBaseQty={handleSetBaseQty}
                   onReorderIngredients={isOwner ? reorderIngredients : undefined}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}

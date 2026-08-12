@@ -14,12 +14,16 @@ interface SubItemsSheetProps {
   // already computed by the caller via getFoodTotals — the sheet's footer
   // just displays it, it doesn't re-derive it.
   totals: { calories: number; protein: number }
+  // The item's own portions (e.g. ordering 2x steak), shown as a stepper next
+  // to the title — separate from any sub-item's qty.
+  baseQty: number
   guestOverrides?: SubItemOverrides
   guestIngredientOverrides?: IngredientOverrides
   closing: boolean
   onClose: () => void
   onSetQty: (subId: string, qty: number) => void
   onSetIngredientQty: (subId: string, ingredientId: string, qty: number) => void
+  onSetBaseQty: (qty: number) => void
   onSelectAll: () => void
   onClearAll: () => void
   // Reordering rewrites the shared item record, so only the owner gets this —
@@ -31,12 +35,14 @@ export function SubItemsSheet({
   title,
   subItems,
   totals,
+  baseQty,
   guestOverrides,
   guestIngredientOverrides,
   closing,
   onClose,
   onSetQty,
   onSetIngredientQty,
+  onSetBaseQty,
   onSelectAll,
   onClearAll,
   onReorderIngredients,
@@ -253,9 +259,25 @@ export function SubItemsSheet({
             <div className="dialog-title" id="sub-items-sheet-title">{title}</div>
             <div className="sub-items-sheet-header-sub">已選 {selectedCount} 項</div>
           </div>
-          <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
-            <X size={20} />
-          </button>
+          <div className="sub-items-sheet-header-actions">
+            <div className="sub-item-qty-stepper">
+              <button
+                type="button"
+                aria-label="減少份數"
+                disabled={baseQty <= 1}
+                onClick={() => onSetBaseQty(Math.max(1, baseQty - 1))}
+              >
+                <Minus size={13} />
+              </button>
+              <span className="sub-item-qty-stepper-value">{formatAmount(baseQty)}</span>
+              <button type="button" aria-label="增加份數" onClick={() => onSetBaseQty(baseQty + 1)}>
+                <Plus size={13} />
+              </button>
+            </div>
+            <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="sub-items-sheet-quick-actions">
