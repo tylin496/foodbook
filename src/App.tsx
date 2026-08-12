@@ -219,8 +219,6 @@ function FoodBook({
   }, [sortMode, sortDir])
 
   const handleSortPillClick = (mode: SortMode) => {
-    bulkFlipRef.current = true
-    captureRects()
     if (mode === 'manual') {
       setSortMode('manual')
       return
