@@ -258,9 +258,10 @@ function FoodBook({
   const foodGridRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const prevRectsRef = useRef<Record<string, DOMRect> | null>(null)
-  // Sort-mode changes can reshuffle the whole grid at once (every card moving
-  // a different 2D distance), unlike drag-reorder where usually 1-2 cards
-  // shift. The bouncy drag-settle easing overshooting on every card
+  // Set before any captureRects() that isn't the live drag-move path (sort
+  // change, add/delete, search filter): those can reshuffle many cards at
+  // once, each by a different 2D distance, unlike drag-reorder where usually
+  // 1-2 cards shift. The bouncy drag-settle easing overshooting on every card
   // simultaneously reads as chaotic, so bulk reflows use a plain ease-out.
   const bulkFlipRef = useRef(false)
   const dragMetaRef = useRef<{ id: string; grabOffsetX: number; grabOffsetY: number } | null>(null)
@@ -789,6 +790,7 @@ function FoodBook({
             qty: toNumber(ing.qty) || 1,
           })),
       }))
+    bulkFlipRef.current = true
     captureRects()
     const result = editingId
       ? await setItems((prev) =>
@@ -830,6 +832,7 @@ function FoodBook({
     if (removingIds.has(id)) return
     setRemovingIds((prev) => new Set(prev).add(id))
     window.setTimeout(() => {
+      bulkFlipRef.current = true
       captureRects(id)
       setItems((prev) => prev.filter((item) => item.id !== id))
       setSelectedIds((prev) => {
@@ -865,6 +868,7 @@ function FoodBook({
                 ref={searchInputRef}
                 value={search}
                 onChange={(e) => {
+                  bulkFlipRef.current = true
                   captureRects()
                   setSearch(e.target.value)
                 }}
@@ -879,6 +883,7 @@ function FoodBook({
                   className="search-clear"
                   aria-label="清除搜尋"
                   onClick={() => {
+                    bulkFlipRef.current = true
                     captureRects()
                     setSearch('')
                     searchInputRef.current?.focus()
