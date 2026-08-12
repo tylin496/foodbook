@@ -22,6 +22,15 @@
   --chip-ring: rgba(236, 48, 19, .18);
   --off-ring: rgba(60, 60, 67, .16);
   --select-ring: rgba(236, 48, 19, .10);
+
+  /* — FoodModal/chip-sheet redesign — semantic + ring tokens, additive
+     (see 編輯和芯片選單優化 handoff) — */
+  --good: #1d9149;
+  --blue: #5e9cf5;
+  --bad: #e03535;
+  --rule-strong: rgba(60, 60, 67, .2);
+  --scrim-bg: rgba(0, 0, 0, .34);
+  --scrim-blur: blur(16px);
   --glass-bg: rgba(244, 244, 246, .62);
   --glass-highlight: rgba(255, 255, 255, .72);
   --glass-shadow: rgba(17, 24, 39, .16);
@@ -146,6 +155,12 @@
   --chip-ring: rgba(255, 107, 74, .26);
   --off-ring: rgba(235, 235, 245, .18);
   --select-ring: rgba(255, 107, 74, .16);
+  --good: #4cd476;
+  --blue: #5e9cf5;
+  --bad: #ff6b6b;
+  --rule-strong: rgba(235, 235, 245, .26);
+  --scrim-bg: rgba(0, 0, 0, .5);
+  --scrim-blur: blur(16px);
   --glass-bg: rgba(26, 26, 26, .62);
   --glass-highlight: rgba(255, 255, 255, .22);
   --glass-shadow: rgba(0, 0, 0, .55);
@@ -868,14 +883,13 @@ body { background: var(--bg); }
 }
 .sub-items-sheet-row:last-child { padding-bottom: 0; border-bottom: none; }
 .sub-items-sheet-row-top {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  display: flex; align-items: center; gap: var(--space-2);
 }
 .sub-items-sheet-row-name {
+  flex: 1; min-width: 0;
   font-family: var(--font-ui); font-weight: 600; font-size: 14px; color: var(--ink);
-  background: none; border: none; padding: 0; margin: 0;
-  cursor: pointer; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.sub-items-sheet-row-name:disabled { cursor: default; }
 .sub-items-sheet-row.is-excluded .sub-items-sheet-row-name,
 .sub-items-sheet-row.is-excluded .sub-item-qty-stepper-value,
 .sub-items-sheet-row.is-excluded .sub-item-detail-ingredient-name,
@@ -891,7 +905,7 @@ body { background: var(--bg); }
   width: 100%;
 }
 .sub-item-detail-ingredient-top {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  display: flex; align-items: center; gap: var(--space-2);
 }
 .sub-item-detail-ingredient-row.is-dragging { position: relative; cursor: grabbing; opacity: 1; }
 .sub-item-detail-ingredient-grip {
@@ -905,9 +919,11 @@ body { background: var(--bg); }
 .sub-item-detail-ingredient-row.is-dragging .sub-item-detail-ingredient-grip { cursor: grabbing; color: var(--color-accent); }
 .sub-item-detail-ingredient-grip::before { content: ''; position: absolute; inset: -3px; }
 .sub-item-detail-ingredient-name {
+  /* flex-grow: 0 (default) on purpose — the qty stepper/add button sits right
+     next to the name instead of being pushed to the row's far edge. */
+  flex: 0 1 auto; min-width: 0;
   font: inherit; font-size: 13px; color: var(--ink-2);
-  background: none; border: none; padding: 0; margin: 0;
-  cursor: pointer; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sub-item-detail-ingredient-stats { font-size: 11px; color: var(--ink-4); text-align: right; }
 .sub-item-detail-ingredient-row.is-excluded {
@@ -1047,7 +1063,11 @@ body { background: var(--bg); }
 .number-fields .input {
   font-family: var(--font-mono); font-size: 19px; font-weight: 700; letter-spacing: -.02em;
 }
-.number-fields .input#food-protein { color: var(--chip-ink); }
+.number-fields .input#food-calories { color: var(--good); }
+.number-fields .input#food-protein { color: var(--blue); }
+.number-fields .input:disabled {
+  background: var(--bg-soft); cursor: default; opacity: 1;
+}
 
 .btn {
   font-family: var(--font-ui); font-weight: 600; font-size: 14px;
@@ -1065,21 +1085,20 @@ body { background: var(--bg); }
 }
 
 /* — modal form — */
-.photo-upload-row {
-  display: flex; align-items: center; gap: 10px;
-  height: 52px; padding: 0 12px;
-  background: var(--color-surface); border-radius: var(--radius-sm);
+.food-modal-photo-row {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
   cursor: pointer;
 }
-.photo-upload-thumb {
-  width: 34px; height: 34px; flex: none; border-radius: 8px; overflow: hidden;
+.food-modal-photo {
+  width: 92px; height: 92px; flex: none; border-radius: 18px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  background: var(--color-surface);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  background: var(--bg-soft);
+  color: var(--ink-4);
 }
-.photo-upload-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.photo-upload-label { font-size: 13px; color: var(--ink-2); }
+.food-modal-photo img { width: 100%; height: 100%; object-fit: cover; }
+.photo-upload-label { font-size: 12px; color: var(--ink-3); }
 .upload-error { color: var(--color-accent); font-size: 12px; margin-top: -8px; }
+.dialog-divider { height: 1px; background: var(--rule); margin: 2px 0; }
 .number-fields {
   display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: var(--space-3);
 }
@@ -1091,11 +1110,22 @@ body { background: var(--bg); }
 }
 .dialog-actions.space-between { justify-content: space-between; }
 .btn-delete-text {
-  background: transparent; border: none; color: var(--color-accent);
+  background: transparent; border: none; color: var(--bad);
   font-family: var(--font-heading); font-weight: 800; font-size: 14px;
   cursor: pointer; padding: var(--space-2) 0;
 }
 .btn-delete-text:hover { text-decoration: underline; }
+.delete-confirm-inline {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--ink-3);
+}
+.delete-confirm-inline .btn-delete-text { padding: 0; font-size: 13px; }
+.btn-delete-cancel {
+  background: transparent; border: none; color: var(--ink-3);
+  font-family: var(--font-ui); font-weight: 600; font-size: 13px;
+  cursor: pointer; padding: 0;
+}
+.btn-delete-cancel:hover { color: var(--ink); }
 
 .save-success-icon { animation: check-bounce 500ms var(--motion-pop-bold); }
 @keyframes check-bounce {
@@ -1114,13 +1144,12 @@ body { background: var(--bg); }
 
 .sub-items { display: flex; flex-direction: column; gap: var(--space-2); }
 .sub-item-row {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 10px; background: var(--color-bg);
-  border: 1px solid var(--color-divider);
+  display: flex; flex-direction: column;
+  padding: 10px; background: var(--bg-soft);
+  border-radius: var(--radius-sm);
 }
 .sub-item-row.is-dragging { position: relative; cursor: grabbing; opacity: 1; }
-.sub-item-row-top { display: flex; gap: 8px; align-items: center; }
-.sub-item-row-top .input { flex: 1; }
+.sub-item-row-top { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 /* Wraps the raw checkbox so its clickable/tappable area matches its 30px
    siblings (grip, remove) instead of the checkbox's own tiny native box —
    a native <label> click target extends over the whole wrapper for free. */
@@ -1129,6 +1158,22 @@ body { background: var(--bg); }
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
+.sub-item-row-summary { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sub-item-row-name {
+  font-family: var(--font-ui); font-weight: 600; font-size: 14px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sub-item-row.is-excluded .sub-item-row-name { color: var(--ink-4); }
+.sub-item-row-collapsed-stats { font-size: 11px; color: var(--ink-4); }
+.sub-item-qty-badge {
+  flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
+}
+.sub-item-chevron {
+  flex: none; color: var(--ink-4);
+  transition: transform 180ms var(--ease-enter);
+}
+.sub-item-row-top[aria-expanded="true"] .sub-item-chevron { transform: rotate(180deg); }
+.sub-item-row-expanded { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .sub-item-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-accent); }
 .sub-item-grip {
   position: relative;
@@ -1172,7 +1217,7 @@ body { background: var(--bg); }
 .sub-item-qty-wrap .sub-item-qty-x {
   font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
-.sub-item-row-top .input.sub-item-qty { flex: none; width: 44px; text-align: center; padding-left: 4px; padding-right: 4px; }
+.sub-item-row-expanded .input.sub-item-qty { flex: none; width: 44px; text-align: center; padding-left: 4px; padding-right: 4px; }
 .sub-item-qty-hint {
   font-size: 11px; color: color-mix(in srgb, var(--color-text) 55%, transparent);
   padding-left: 2px;
@@ -1225,5 +1270,111 @@ body { background: var(--bg); }
 }
 .dialog-header {
   display: flex; align-items: center; justify-content: space-between;
+}
+
+/* — sub-items bottom sheet — a chip click opens this anchored to the
+   bottom of the screen instead of centered like every other dialog.
+   Compound selectors (.dialog-backdrop.sub-items-sheet-backdrop /
+   .dialog.sub-items-sheet) win over the base .dialog-backdrop/.dialog rules
+   regardless of source order, same pattern as .dialog.subway-dialog above. */
+.dialog-backdrop.sub-items-sheet-backdrop {
+  align-items: flex-end;
+  padding: 0;
+  background: var(--scrim-bg);
+  backdrop-filter: var(--scrim-blur);
+  -webkit-backdrop-filter: var(--scrim-blur);
+}
+.dialog.sub-items-sheet {
+  width: min(480px, 100%);
+  max-height: 78vh;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  padding: 0 0 calc(14px + env(safe-area-inset-bottom));
+  gap: 0;
+  animation: sheet-in 280ms var(--motion-entrance-bold);
+}
+.dialog.sub-items-sheet.is-closing {
+  animation: sheet-out 180ms ease forwards;
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(60%); }
+}
+.sub-items-sheet-handle {
+  flex: none; width: 36px; height: 4px; margin: 8px auto 0;
+  border-radius: var(--radius-pill); background: var(--rule-strong);
+}
+.sub-items-sheet .dialog-header { padding: 10px 18px 6px; flex: none; }
+.sub-items-sheet-header-sub { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.sub-items-sheet-quick-actions { flex: none; display: flex; gap: 8px; padding: 0 18px 8px; }
+.sub-items-sheet-pill {
+  height: 26px; padding: 0 12px; border: none; border-radius: var(--radius-pill);
+  background: none; box-shadow: inset 0 0 0 1px var(--rule-strong);
+  color: var(--ink-2); font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+.sub-items-sheet-pill:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.sub-items-sheet-list {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding: 4px 18px 8px; margin: 0; max-height: none;
+}
+.sub-items-sheet-footer {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 12px 18px 0; border-top: 1px solid var(--rule);
+}
+.sub-items-sheet-footer-stats { display: flex; gap: 16px; }
+.sub-items-sheet-footer-value {
+  font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: -.02em;
+}
+.sub-items-sheet-footer-value.is-calories { color: var(--good); }
+.sub-items-sheet-footer-value.is-protein { color: var(--blue); }
+.sub-items-sheet-footer-label { font-size: 10px; color: var(--ink-4); margin-top: 1px; }
+.sub-items-sheet-done { min-width: 88px; }
+
+.sub-items-sheet-checkbox {
+  position: relative;
+  flex: none; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--bg-card); box-shadow: inset 0 0 0 1.5px var(--rule-strong); color: #fff;
+}
+.sub-items-sheet-row:not(.is-excluded) .sub-items-sheet-checkbox {
+  background: var(--accent-strong); box-shadow: none;
+}
+.sub-items-sheet-checkbox:disabled { cursor: default; opacity: .5; }
+
+.sub-item-detail-ingredient-checkbox {
+  position: relative;
+  flex: none; width: 16px; height: 16px; padding: 0; border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--bg-soft); box-shadow: inset 0 0 0 1.5px var(--rule-strong); color: #fff;
+}
+.sub-item-detail-ingredient-row:not(.is-excluded) .sub-item-detail-ingredient-checkbox {
+  background: var(--accent-strong); box-shadow: none;
+}
+
+/* Desktop: the chip sheet reads as a normal centered dialog instead of a
+   bottom-anchored sheet — the slide-from-edge affordance is a phone/touch
+   pattern that looks out of place once the viewport is wide enough that the
+   sheet's own max width no longer spans it edge-to-edge. */
+@media (min-width: 640px) {
+  .dialog-backdrop.sub-items-sheet-backdrop {
+    align-items: center;
+    padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
+      calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+  .dialog.sub-items-sheet {
+    max-height: calc(100vh - var(--space-4) * 2);
+    border-radius: var(--radius-card);
+    animation: dialog-in 480ms var(--motion-entrance-bold);
+  }
+  .dialog.sub-items-sheet.is-closing {
+    animation: dialog-out 180ms ease forwards;
+  }
+  .sub-items-sheet-handle { display: none; }
 }
 

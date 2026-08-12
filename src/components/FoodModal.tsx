@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Camera, Check, GripVertical, Plus, X } from 'lucide-react'
+import { Camera, Check, ChevronDown, GripVertical, Plus, X } from 'lucide-react'
 import type { FoodDraft, FoodIngredientDraft, FoodSubItemDraft } from '../types'
 import { uploadToCloudinary } from '../cloudinary'
 import { useDialogDismiss } from '../useDialogDismiss'
@@ -39,6 +39,11 @@ export function FoodModal({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  // Which sub-item's card is expanded in the form's accordion — collapsed by
+  // default, single-expand (matches the chip-menu redesign's simplified
+  // sub-item information hierarchy).
+  const [expandedSubId, setExpandedSubId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const saveTimerRef = useRef<number | null>(null)
   const onSaveRef = useRef(onSave)
   onSaveRef.current = onSave
@@ -113,10 +118,12 @@ export function FoodModal({
         protein: '0',
         subItems: [baseSubItem, newSubItem],
       })
+      setExpandedSubId(newSubItem.id)
       return
     }
 
     onChange({ ...draft, subItems: [...draft.subItems, newSubItem] })
+    setExpandedSubId(newSubItem.id)
   }
 
   const updateSubItem = (id: string, patch: Partial<FoodSubItemDraft>) => {
@@ -160,6 +167,7 @@ export function FoodModal({
         (target.ingredients?.length ?? 0) > 0)
     if (hasContent && !(await confirm('確定要刪除這個子項目嗎？'))) return
     onChange({ ...draft, subItems: draft.subItems.filter((sub) => sub.id !== id) })
+    setExpandedSubId((current) => (current === id ? null : current))
   }
 
   // Ingredients belong entirely to their sub-item (e.g. "鐵板麵" under "沙朗牛排"):
@@ -663,6 +671,21 @@ export function FoodModal({
           </button>
         </div>
 
+        <div className="food-modal-photo-row" onClick={() => fileInputRef.current?.click()}>
+          <div className="food-modal-photo">
+            {preview ? <img src={preview} alt="食物照片預覽" /> : <Camera size={22} strokeWidth={1.8} />}
+          </div>
+          {uploading && <span className="photo-upload-label">上傳中…</span>}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+        </div>
+        {uploadError && <div className="upload-error">照片上傳失敗，請重試</div>}
+
         <div className="field">
           <label htmlFor="food-name">食物名稱</label>
           <input
@@ -720,22 +743,7 @@ export function FoodModal({
           </div>
         </div>
 
-        <div className="photo-upload-row" onClick={() => fileInputRef.current?.click()}>
-          <div className="photo-upload-thumb">
-            {preview ? <img src={preview} alt="食物照片預覽" /> : <Camera size={18} strokeWidth={1.8} />}
-          </div>
-          <span className="photo-upload-label">
-            {uploading ? '上傳中…' : preview ? '更換照片' : '加一張照片 選填'}
-          </span>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-        </div>
-        {uploadError && <div className="upload-error">照片上傳失敗，請重試</div>}
+        <div className="dialog-divider" />
 
         <div className="sub-items-section">
           {hasSubItems ? (
@@ -757,13 +765,25 @@ export function FoodModal({
             <div className="sub-items" ref={subItemsRef}>
               {draft.subItems.map((sub) => {
                 const subTotals = subItemTotals(sub)
+                const expanded = expandedSubId === sub.id
                 return (
                   <div
-                    className={`sub-item-row${sub.selected ? '' : ' is-excluded'}${sub.id === draggingSubItemId ? ' is-dragging' : ''}`}
+                    className={`sub-item-row${sub.selected ? '' : ' is-excluded'}${sub.id === draggingSubItemId ? ' is-dragging' : ''}${expanded ? ' is-expanded' : ''}`}
                     key={sub.id}
                     data-sub-item-id={sub.id}
                   >
-                    <div className="sub-item-row-top">
+                    <div
+                      className="sub-item-row-top"
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expanded}
+                      onClick={() => setExpandedSubId((current) => (current === sub.id ? null : sub.id))}
+                      onKeyDown={(e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return
+                        e.preventDefault()
+                        setExpandedSubId((current) => (current === sub.id ? null : sub.id))
+                      }}
+                    >
                       <button
                         type="button"
                         className="sub-item-grip"
@@ -772,10 +792,11 @@ export function FoodModal({
                         onPointerMove={handleSubItemGripMove}
                         onPointerUp={handleSubItemGripUp}
                         onPointerCancel={handleSubItemGripUp}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <GripVertical size={14} />
                       </button>
-                      <label className="checkbox-tap-area">
+                      <label className="checkbox-tap-area" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           className="sub-item-checkbox"
@@ -784,34 +805,39 @@ export function FoodModal({
                           onChange={(e) => selectSubItem(sub.id, e.target.checked)}
                         />
                       </label>
-                      <input
-                        className="input"
-                        value={sub.name}
-                        onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
-                        placeholder="例如：加鯛魚"
-                      />
-                      <div className="sub-item-qty-wrap" title="份數（幾份）">
-                        <span className="sub-item-qty-x">×</span>
-                        <input
-                          className="input sub-item-qty"
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          step="0.5"
-                          value={sub.qty}
-                          onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
-                          aria-label="份數"
-                        />
+                      <div className="sub-item-row-summary">
+                        <div className="sub-item-row-name">{sub.name.trim() || '子項目'}</div>
+                        {!expanded && (
+                          <div className="sub-item-row-collapsed-stats">
+                            {sub.selected
+                              ? `${formatAmount(subTotals.calories)} kcal ${formatAmount(subTotals.protein)} g`
+                              : '未計入加總'}
+                          </div>
+                        )}
                       </div>
+                      {subTotals.qty !== 1 && <span className="sub-item-qty-badge">×{formatAmount(subTotals.qty)}</span>}
                       <button
                         type="button"
                         className="sub-item-remove"
                         aria-label="刪除子項目"
-                        onClick={() => removeSubItem(sub.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeSubItem(sub.id)
+                        }}
                       >
                         <X size={14} />
                       </button>
+                      <ChevronDown size={14} className="sub-item-chevron" />
                     </div>
+                    {expanded && (
+                    <div className="sub-item-row-expanded" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="input"
+                      value={sub.name}
+                      onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
+                      placeholder="例如：加鯛魚"
+                      autoFocus
+                    />
                     <div className="sub-item-row-numbers">
                       <div className="input-unit-field">
                         <input
@@ -852,6 +878,19 @@ export function FoodModal({
                         />
                         <span className="input-unit">g</span>
                       </div>
+                    </div>
+                    <div className="sub-item-qty-wrap" title="份數（幾份）">
+                      <span className="sub-item-qty-x">×</span>
+                      <input
+                        className="input sub-item-qty"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.5"
+                        value={sub.qty}
+                        onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
+                        aria-label="份數"
+                      />
                     </div>
                     {subTotals.qty !== 1 && (
                       <div className="sub-item-qty-hint">
@@ -986,6 +1025,8 @@ export function FoodModal({
                         </div>
                       )}
                     </div>
+                    </div>
+                    )}
                   </div>
                 )
               })}
@@ -996,9 +1037,21 @@ export function FoodModal({
         <div className="dialog-actions space-between">
           <div>
             {isEditing && (
-              <button type="button" className="btn-delete-text" onClick={onDelete}>
-                刪除
-              </button>
+              confirmDelete ? (
+                <div className="delete-confirm-inline">
+                  <span>確定刪除？</span>
+                  <button type="button" className="btn-delete-text" onClick={onDelete}>
+                    刪除
+                  </button>
+                  <button type="button" className="btn-delete-cancel" onClick={() => setConfirmDelete(false)}>
+                    取消
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn-delete-text" onClick={() => setConfirmDelete(true)}>
+                  刪除紀錄
+                </button>
+              )
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>

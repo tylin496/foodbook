@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Calculator, Camera, Check, Pencil } from 'lucide-react'
 import type { FoodItem, IngredientOverrides, SubItemOverrides } from '../types'
-import { getFoodTotals, isSubItemSelected } from '../types'
+import { getEffectiveSubItemQty, getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { SubItemsSheet } from './SubItemsSheet'
 
@@ -395,6 +395,7 @@ export function FoodCard({
         <SubItemsSheet
           title={item.name}
           subItems={subItems}
+          totals={totals}
           guestOverrides={guestOverrides}
           guestIngredientOverrides={guestIngredientOverrides}
           closing={sheetClosing}
@@ -406,6 +407,21 @@ export function FoodCard({
           onSetIngredientQty={(subId, ingredientId, qty) => {
             sheetChangedRef.current = true
             onSetIngredientQty(item.id, subId, ingredientId, qty)
+          }}
+          onSelectAll={() => {
+            sheetChangedRef.current = true
+            subItems.forEach((sub) => {
+              const currentQty = getEffectiveSubItemQty(sub, guestOverrides)
+              onSetSubItemQty(item.id, sub.id, currentQty > 0 ? currentQty : 1)
+            })
+          }}
+          onClearAll={() => {
+            sheetChangedRef.current = true
+            // handleSetSubItemQty (App.tsx) already blocks dropping the last
+            // selected sub-item to 0 — that's a deliberate app-wide invariant
+            // (ed8fb2e), so looping this needs no extra "keep at least one"
+            // guard of its own; the last row just stays selected.
+            subItems.forEach((sub) => onSetSubItemQty(item.id, sub.id, 0))
           }}
           onReorderIngredients={
             onReorderIngredients

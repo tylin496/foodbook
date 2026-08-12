@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { GripVertical, Minus, Plus, X } from 'lucide-react'
+import { Check, GripVertical, Minus, Plus, X } from 'lucide-react'
 import type { FoodSubItem, IngredientOverrides, SubItemOverrides } from '../types'
 import { getEffectiveIngredientQty, getEffectiveSubItemQty, getSubItemTotals } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
@@ -10,12 +10,18 @@ import { useFocusTrap } from '../useFocusTrap'
 interface SubItemsSheetProps {
   title: string
   subItems: FoodSubItem[]
+  // The food item's overall totals (base + every sub-item/ingredient),
+  // already computed by the caller via getFoodTotals — the sheet's footer
+  // just displays it, it doesn't re-derive it.
+  totals: { calories: number; protein: number }
   guestOverrides?: SubItemOverrides
   guestIngredientOverrides?: IngredientOverrides
   closing: boolean
   onClose: () => void
   onSetQty: (subId: string, qty: number) => void
   onSetIngredientQty: (subId: string, ingredientId: string, qty: number) => void
+  onSelectAll: () => void
+  onClearAll: () => void
   // Reordering rewrites the shared item record, so only the owner gets this —
   // omit it for guests and the drag handle just doesn't render.
   onReorderIngredients?: (subId: string, orderedIngredientIds: string[]) => void
@@ -24,12 +30,15 @@ interface SubItemsSheetProps {
 export function SubItemsSheet({
   title,
   subItems,
+  totals,
   guestOverrides,
   guestIngredientOverrides,
   closing,
   onClose,
   onSetQty,
   onSetIngredientQty,
+  onSelectAll,
+  onClearAll,
   onReorderIngredients,
 }: SubItemsSheetProps) {
   const backdropProps = useDialogDismiss(onClose)
@@ -229,7 +238,7 @@ export function SubItemsSheet({
   }, [])
 
   return createPortal(
-    <div className={`dialog-backdrop${closing ? ' is-closing' : ''}`} {...backdropProps}>
+    <div className={`dialog-backdrop sub-items-sheet-backdrop${closing ? ' is-closing' : ''}`} {...backdropProps}>
       <div
         ref={containerRef}
         role="dialog"
@@ -238,18 +247,30 @@ export function SubItemsSheet({
         className={`dialog sub-items-sheet${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="sub-items-sheet-handle" />
         <div className="dialog-header">
-          <div className="dialog-title" id="sub-items-sheet-title">{title}</div>
+          <div>
+            <div className="dialog-title" id="sub-items-sheet-title">{title}</div>
+            <div className="sub-items-sheet-header-sub">已選 {selectedCount} 項</div>
+          </div>
           <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
             <X size={20} />
           </button>
+        </div>
+
+        <div className="sub-items-sheet-quick-actions">
+          <button type="button" className="sub-items-sheet-pill" onClick={onSelectAll}>全選</button>
+          <button type="button" className="sub-items-sheet-pill" onClick={onClearAll}>清除</button>
         </div>
 
         <div className="sub-items-sheet-list">
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
             const isLastSelected = selected && selectedCount <= 1
-            const totals = getSubItemTotals(sub, activeQty, guestIngredientOverrides)
+            // Show the stats a sub-item would contribute if selected, not
+            // zeroed out just because it's currently excluded — activeQty is
+            // 0 when unselected, which would otherwise blank the display.
+            const subTotals = getSubItemTotals(sub, selected ? activeQty : (sub.qty ?? 1), guestIngredientOverrides)
             const ingredients = getSortedIngredients(sub)
 
             return (
@@ -257,12 +278,14 @@ export function SubItemsSheet({
                 <div className="sub-items-sheet-row-top">
                   <button
                     type="button"
-                    className="sub-items-sheet-row-name"
+                    className="sub-items-sheet-checkbox"
+                    aria-label={selected ? '取消計入加總' : '計入加總'}
                     disabled={isLastSelected}
                     onClick={() => onSetQty(sub.id, activeQty > 0 ? 0 : 1)}
                   >
-                    {formatSubItemName(sub)}
+                    {selected && <Check size={12} strokeWidth={3} />}
                   </button>
+                  <span className="sub-items-sheet-row-name">{formatSubItemName(sub)}</span>
                   <div className="sub-item-qty-stepper">
                     <button
                       type="button"
@@ -316,11 +339,13 @@ export function SubItemsSheet({
                             )}
                             <button
                               type="button"
-                              className="sub-item-detail-ingredient-name"
+                              className="sub-item-detail-ingredient-checkbox"
+                              aria-label={ingSelected ? '取消計入加總' : '計入加總'}
                               onClick={() => onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : 1)}
                             >
-                              {formatSubItemName(ing)}
+                              {ingSelected && <Check size={9} strokeWidth={3} />}
                             </button>
+                            <span className="sub-item-detail-ingredient-name">{formatSubItemName(ing)}</span>
                             {ingQty > 1 ? (
                               <div className="ingredient-qty-stepper">
                                 <button
@@ -352,8 +377,15 @@ export function SubItemsSheet({
                             )}
                           </div>
                           <div className="sub-item-detail-ingredient-stats">
-                            {formatAmount(ing.weight * ingQty)}g {formatAmount(ing.calories * ingQty)}kcal{' '}
-                            {formatAmount(ing.protein * ingQty)}g
+                            {(() => {
+                              const displayQty = ingSelected ? ingQty : (ing.qty ?? 1)
+                              return (
+                                <>
+                                  {formatAmount(ing.weight * displayQty)}g {formatAmount(ing.calories * displayQty)}kcal{' '}
+                                  {formatAmount(ing.protein * displayQty)}g
+                                </>
+                              )
+                            })()}
                           </div>
                         </div>
                       )
@@ -362,11 +394,25 @@ export function SubItemsSheet({
                 )}
 
                 <div className="sub-items-sheet-row-stats">
-                  {formatAmount(totals.calories)}kcal/{formatAmount(totals.protein)}g
+                  {formatAmount(subTotals.calories)}kcal/{formatAmount(subTotals.protein)}g
                 </div>
               </div>
             )
           })}
+        </div>
+
+        <div className="sub-items-sheet-footer">
+          <div className="sub-items-sheet-footer-stats">
+            <div>
+              <div className="sub-items-sheet-footer-value is-calories">{formatAmount(totals.calories)}</div>
+              <div className="sub-items-sheet-footer-label">KCAL</div>
+            </div>
+            <div>
+              <div className="sub-items-sheet-footer-value is-protein">{formatAmount(totals.protein)}</div>
+              <div className="sub-items-sheet-footer-label">蛋白 G</div>
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary sub-items-sheet-done" onClick={onClose}>完成</button>
         </div>
       </div>
     </div>,

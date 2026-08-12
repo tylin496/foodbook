@@ -754,7 +754,8 @@ function FoodBook({
 
   const deleteItem = async (id: string) => {
     if (!isOwner) return
-    if (!(await confirm('確定要刪除這筆紀錄嗎？'))) return
+    // FoodModal gates this call with its own inline "確定刪除？" confirm —
+    // an extra confirm() here would double-prompt.
     if (editingId === id) closeModal()
     if (removingIds.has(id)) return
     setRemovingIds((prev) => new Set(prev).add(id))
