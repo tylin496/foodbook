@@ -1,12 +1,10 @@
-/* Modernist — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
+/* Design-system tokens and component classes. Token names/values are kept in
+   sync with LiftOS's src/shared/styles/tokens.css (the shared reference —
+   see liftos memory project-liftos-redesign-direction); this file is the
+   source of truth for Foodbook's own component classes built on top. */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
-  /* LiftOS tokens — power the redesigned topbar/search/food-card/selection-bar
-     below (direction 1b: full-bleed photo, dark). The Modernist tokens further
-     down still drive the add/edit dialog and sub-item picker, which haven't
-     been reskinned yet. */
   --bg: #f4f4f6;
   --bg-card: #ffffff;
   --bg-soft: #ebebf0;
@@ -15,20 +13,18 @@
   --ink-3: #6e6e73;
   --ink-4: #8e8e93;
   --rule: rgba(60, 60, 67, .1);
-  --accent: #ec3013;
-  --accent-strong: #cf2a10;
-  --chip-bg: rgba(236, 48, 19, .10);
-  --chip-ink: #b8280f;
-  --chip-ring: rgba(236, 48, 19, .18);
-  --off-ring: rgba(60, 60, 67, .16);
-  --select-ring: rgba(236, 48, 19, .10);
-
-  /* — FoodModal/chip-sheet redesign — semantic + ring tokens, additive
-     (see 編輯和芯片選單優化 handoff) — */
-  --good: #1d9149;
-  --blue: #5e9cf5;
-  --bad: #e03535;
   --rule-strong: rgba(60, 60, 67, .2);
+  --accent: #ec5122;
+  --accent-strong: #cf491a;
+  --chip-bg: rgba(236, 81, 34, .10);
+  --chip-ink: #a83c14;
+  --chip-ring: rgba(236, 81, 34, .18);
+  --off-ring: rgba(60, 60, 67, .16);
+  --select-ring: rgba(236, 81, 34, .10);
+
+  --good: #2fb24d;
+  --blue: #5e9cf5;
+  --bad: #ff383c;
   --scrim-bg: rgba(0, 0, 0, .34);
   --scrim-blur: blur(16px);
   --glass-bg: rgba(244, 244, 246, .62);
@@ -36,7 +32,7 @@
   --glass-shadow: rgba(17, 24, 39, .16);
   --glass-edge: rgba(255, 255, 255, .8);
   --glass-btn: rgba(255, 255, 255, .68);
-  --page-bg: radial-gradient(circle at 50% -180px, rgba(236, 48, 19, .10), transparent 360px),
+  --page-bg: radial-gradient(circle at 50% -180px, rgba(236, 81, 34, .10), transparent 360px),
     linear-gradient(180deg, #ffffff 0, #f4f4f6 320px), #f4f4f6;
 
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Noto Sans TC", sans-serif;
@@ -49,6 +45,14 @@
   --card-shadow: 0 1px 1px rgba(17, 24, 39, .04), 0 4px 10px -2px rgba(17, 24, 39, .05),
     0 12px 28px -8px rgba(17, 24, 39, .07), 0 28px 60px -32px rgba(17, 24, 39, .09),
     inset 0 1px 0 rgba(255, 255, 255, .92);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
 
   --dur-press: 120ms;
   --dur-exit: 200ms;
@@ -58,76 +62,11 @@
   --ease-press: cubic-bezier(.2, .8, .2, 1);
   --ease-enter: cubic-bezier(.16, 1, .3, 1);
   --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
-}
 
-:root {
-  --color-bg: #f3f2f2;
-  --color-surface: #eae9e9;
-  --color-text: #201e1d;
-  --color-accent: #ec3013;
-  --color-accent-2: #e15b47;
-  --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
-
-  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
-     same step of any role matches the others in visual value. */
-  --color-neutral-100: #f8f4f4;
-  --color-neutral-200: #eae7e7;
-  --color-neutral-300: #d7d3d3;
-  --color-neutral-400: #bab6b6;
-  --color-neutral-500: #9b9797;
-  --color-neutral-600: #7d7979;
-  --color-neutral-700: #605d5d;
-  --color-neutral-800: #444141;
-  --color-neutral-900: #2d2b2b;
-
-  --color-accent-100: #fff2ef;
-  --color-accent-200: #ffe0d9;
-  --color-accent-300: #ffc4b8;
-  --color-accent-400: #ff9783;
-  --color-accent-500: #ff563c;
-  --color-accent-600: #dd2b0f;
-  --color-accent-700: #ae1800;
-  --color-accent-800: #7c1405;
-  --color-accent-900: #4d170e;
-
-  --color-accent-2-100: #fff2ef;
-  --color-accent-2-200: #ffe0da;
-  --color-accent-2-300: #ffc4b9;
-  --color-accent-2-400: #ff9784;
-  --color-accent-2-500: #ef6853;
-  --color-accent-2-600: #c94b39;
-  --color-accent-2-700: #9e3526;
-  --color-accent-2-800: #71261b;
-  --color-accent-2-900: #471d16;
-
-  --font-heading: "Archivo", system-ui, sans-serif;
-  --font-heading-weight: 800;
-  --font-body: "Archivo", system-ui, sans-serif;
-
-  --space-1: 4.0px;
-  --space-2: 8.0px;
-  --space-3: 12.0px;
-  --space-4: 16.0px;
-  --space-6: 24.0px;
-  --space-8: 32.0px;
-
-  /* --radius-sm deliberately not redeclared here: this block's --radius-md/lg
-     are for the unused foundational classes below (.card, .tag, .seg, ...),
-     but --radius-sm is only ever consumed by the live LiftOS components
-     (search bar, dialog inputs, Subway iframe frame, ...) — a same-name
-     :root redeclaration here silently clobbered their 10px rounding down to
-     0, rendering them square next to the food card's 14px corners. */
-  --radius-md: 0px;
-  --radius-lg: 0px;
-
-  /* Elevation — derived from the ground: soft ink-tinted shadows on a
-     light theme, a hairline edge + ambient darkness on a dark one. */
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
-  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
-
-  /* Motion — bold/playful timing per product direction. prefers-reduced-motion
-     (below) collapses all of this to ~0 as the fallback. */
+  /* Bold-timing motion for dialog/celebration/drag-reorder — Foodbook-specific,
+     not part of LiftOS's shared token set. --motion-flip-bold drives the
+     drag-to-reorder FLIP transition set inline from App.tsx/FoodModal.tsx/
+     SubItemsSheet.tsx (el.style.transition), not from this stylesheet. */
   --motion-flip-bold: 420ms cubic-bezier(0.34, 1.61, 0.64, 1);
   --motion-pop-bold: cubic-bezier(0.34, 1.56, 0.64, 1);
   --motion-entrance-bold: cubic-bezier(0.22, 1, 0.36, 1);
@@ -138,7 +77,8 @@
 
 /* Dark theme — same tokens, tuned for a dark ground. Applied via
    [data-theme="dark"] on <html>, set in useTheme.ts — follows OS preference
-   live (no manual override or persistence exists yet). */
+   live (no manual override or persistence exists yet). Values mirror
+   LiftOS's :root[data-theme="dark"] block. */
 :root[data-theme='dark'] {
   --bg: #1a1a1a;
   --bg-card: rgba(30, 30, 33, .86);
@@ -148,17 +88,17 @@
   --ink-3: #98989d;
   --ink-4: #8e8e93;
   --rule: rgba(235, 235, 245, .14);
-  --accent: #ff6b4a;
-  --accent-strong: #e85f28;
-  --chip-bg: rgba(255, 107, 74, .18);
-  --chip-ink: #ffb49c;
-  --chip-ring: rgba(255, 107, 74, .26);
-  --off-ring: rgba(235, 235, 245, .18);
-  --select-ring: rgba(255, 107, 74, .16);
-  --good: #4cd476;
-  --blue: #5e9cf5;
-  --bad: #ff6b6b;
   --rule-strong: rgba(235, 235, 245, .26);
+  --accent: #ff7a45;
+  --accent-strong: #e85f28;
+  --chip-bg: rgba(255, 122, 69, .18);
+  --chip-ink: #ffb89c;
+  --chip-ring: rgba(255, 122, 69, .26);
+  --off-ring: rgba(235, 235, 245, .18);
+  --select-ring: rgba(255, 122, 69, .16);
+  --good: #4ad968;
+  --blue: #5e9cf5;
+  --bad: #ff4245;
   --scrim-bg: rgba(0, 0, 0, .5);
   --scrim-blur: blur(16px);
   --glass-bg: rgba(26, 26, 26, .62);
@@ -166,58 +106,18 @@
   --glass-shadow: rgba(0, 0, 0, .55);
   --glass-edge: rgba(255, 255, 255, .24);
   --glass-btn: rgba(60, 60, 63, .7);
-  --page-bg: radial-gradient(circle at 50% -200px, rgba(255, 107, 74, .14), transparent 380px), #1a1a1a;
+  --page-bg: radial-gradient(circle at 50% -200px, rgba(255, 122, 69, .14), transparent 380px), #1a1a1a;
   --card-shadow: 0 1px 1px rgba(0, 0, 0, .4), 0 8px 22px -6px rgba(0, 0, 0, .42),
     0 22px 50px -18px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05);
-
-  --color-bg: #1a1817;
-  --color-surface: #242121;
-  --color-text: #f3f1f0;
-  --color-accent: #ff6b4a;
-  --color-accent-2: #e17b5b;
-  --color-divider: color-mix(in srgb, #f3f1f0 22%, transparent);
-
-  --color-neutral-100: #2d2b2b;
-  --color-neutral-200: #444141;
-  --color-neutral-300: #605d5d;
-  --color-neutral-400: #7d7979;
-  --color-neutral-500: #9b9797;
-  --color-neutral-600: #bab6b6;
-  --color-neutral-700: #d7d3d3;
-  --color-neutral-800: #eae7e7;
-  --color-neutral-900: #f8f4f4;
-
-  --color-accent-100: #4d170e;
-  --color-accent-200: #7c1405;
-  --color-accent-300: #ae1800;
-  --color-accent-400: #dd2b0f;
-  --color-accent-500: #ff563c;
-  --color-accent-600: #ff9783;
-  --color-accent-700: #ffc4b8;
-  --color-accent-800: #ffe0d9;
-  --color-accent-900: #fff2ef;
-
-  --color-accent-2-100: #471d16;
-  --color-accent-2-200: #71261b;
-  --color-accent-2-300: #9e3526;
-  --color-accent-2-400: #c94b39;
-  --color-accent-2-500: #ef6853;
-  --color-accent-2-600: #ff9784;
-  --color-accent-2-700: #ffc4b9;
-  --color-accent-2-800: #ffe0da;
-  --color-accent-2-900: #fff2ef;
-
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #000 45%, transparent);
-  --shadow-md: 0 3px 10px color-mix(in srgb, #000 50%, transparent);
   --shadow-lg: 0 12px 32px color-mix(in srgb, #000 60%, transparent);
 }
 
 body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
 }
-h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+h1, h2, h3, h4 { font-family: var(--font-ui); font-weight: 700; }
 
 @keyframes fade-in {
   from { opacity: 0; }
@@ -244,7 +144,7 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-family: var(--font-ui); font-weight: 700;
   line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
 }
 h1 { font-size: 42px; }
@@ -255,126 +155,68 @@ h5 { font-size: 16px; }
 h6 { font-size: 13px; }
 h6 { letter-spacing: 0.08em; text-transform: uppercase; }
 p { margin: 0 0 var(--space-3); }
-a { color: var(--color-accent); text-underline-offset: 3px; }
+a { color: var(--accent); text-underline-offset: 3px; }
 img { display: block; max-width: 100%; }
 figure { margin: 0; }
 figcaption {
   font-size: 11px; margin-top: var(--space-1);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  color: var(--ink-3);
 }
-.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.text-muted { color: var(--ink-3); }
 :focus { outline: none; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 
 /* — rules — */
 .hr {
   height: 2px; border: 0; margin: var(--space-4) 0;
-  background: var(--color-divider);
+  background: var(--rule-strong);
 }
 
 /* — buttons — */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   cursor: pointer; text-decoration: none;
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 14px; line-height: 1.2; color: var(--color-text); /* matches the .input's 14px —
+  font-size: 14px; line-height: 1.2; color: var(--ink); /* matches the .input's 14px —
      the pair sits side by side in sign-up rows */
   background: transparent; border: 1px solid transparent;
   padding: var(--space-2) calc(var(--space-3) * 1.2);
-  border-radius: var(--radius-md);
   transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease, opacity 150ms ease;
 }
 .btn svg { display: block; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn:active:not(:disabled) { transform: scale(0.96); }
-.btn-primary { background: var(--color-accent); color: var(--color-bg); }
-.btn-primary:hover { background: var(--color-accent-600); }
-.btn-primary:active { background: var(--color-accent-700); }
-.btn-secondary { border-color: var(--color-divider); }
-.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
-.btn-ghost { background: transparent; border: none; border-radius: var(--radius-sm); color: var(--color-accent); padding-inline: var(--space-1); }
-.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent-strong) 88%, black); }
+.btn-primary:active { background: color-mix(in srgb, var(--accent-strong) 76%, black); }
+.btn-secondary { border-color: var(--rule-strong); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.btn-secondary:active { background: color-mix(in srgb, var(--ink) 14%, transparent); }
+.btn-ghost { background: transparent; border: none; border-radius: var(--radius-sm); color: var(--accent); padding-inline: var(--space-1); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .btn-icon { width: 36px; height: 36px; padding: 0; }
 .btn-block { width: 100%; margin-top: var(--space-2); justify-content: flex-start; text-align: left; }
 
 /* — forms — */
 .field > label {
   display: block; font-size: 12px; margin-bottom: 5px;
-  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  color: var(--ink-3);
 }
 .input {
   width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
-  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
-  background: var(--color-surface);
-  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  font-size: 14px; color: var(--ink); caret-color: var(--accent);
+  background: var(--bg-soft);
+  border: none;
   transition: border-color 150ms ease;
 }
-.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
-.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+.input:hover { border-color: color-mix(in srgb, var(--ink) 45%, transparent); }
+.input:focus-visible { border-color: var(--accent); outline-offset: 0; }
 .input:disabled {
-  background: var(--color-bg); color: color-mix(in srgb, var(--color-text) 65%, transparent);
+  background: var(--bg); color: color-mix(in srgb, var(--ink) 65%, transparent);
   cursor: not-allowed;
 }
 textarea.input { min-height: 90px; resize: vertical; }
-.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
-.radio input, .seg-opt input {
-  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
-}
-.radio .dot {
-  width: 16px; height: 16px; flex: none; border-radius: 50%;
-  border: 1.5px solid var(--color-divider);
-}
-.radio:hover .dot { border-color: var(--color-accent); }
-.radio input:checked + .dot {
-  border-color: var(--color-accent); background: var(--color-accent);
-  box-shadow: inset 0 0 0 4px var(--color-bg);
-}
-.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.seg {
-  display: inline-flex; overflow: hidden;
-  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
-}
-.seg-opt {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; font-size: 13px; cursor: pointer;
-}
-.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
-.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
-.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
-.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-
-/* — cards — */
-.card {
-  display: flex; flex-direction: column; gap: var(--space-2);
-  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
-}
-.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
-.card-title {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 17px; line-height: 1.2;
-}
-.card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
-.card-meta {
-  display: flex; align-items: center; gap: 6px; font-size: 11px;
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
-}
-.elev-sm { box-shadow: var(--shadow-sm); }
-.elev-md { box-shadow: var(--shadow-md); }
-.elev-lg { box-shadow: var(--shadow-lg); }
-
-/* — tags — */
-.tag {
-  display: inline-flex; align-items: center; font-size: 11px;
-  letter-spacing: 0.02em; padding: 3px 10px;
-  border-radius: calc(var(--radius-md) * 0.75);
-}
-.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
-.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
-.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
-.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
 
 /* — page topbar — */
 .page-topbar {
@@ -446,7 +288,7 @@ textarea.input { min-height: 90px; resize: vertical; }
 /* The input's own outline is suppressed below (it doesn't share the pill's
    rounding), so the ring goes on the pill itself via :focus-within instead —
    otherwise focusing the input by keyboard left no visible indicator at all. */
-.search-bar:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.search-bar:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .search-bar svg { flex: none; }
 .search-bar input {
   flex: 1; min-width: 0; border: 0; background: transparent; outline: none;
@@ -466,19 +308,6 @@ textarea.input { min-height: 90px; resize: vertical; }
   content: ''; position: absolute; inset: -8px;
 }
 
-/* — tables — */
-.table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.table th {
-  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-text) 60%, transparent);
-  padding: var(--space-2); border-bottom: 2px solid var(--color-divider);
-}
-.table td {
-  padding: var(--space-2);
-  border-bottom: 1px solid var(--color-divider);
-}
-.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
-
 /* — dialog — */
 .dialog-backdrop {
   position: fixed; inset: 0; display: grid; place-items: center;
@@ -489,7 +318,9 @@ textarea.input { min-height: 90px; resize: vertical; }
   z-index: 100;
   padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
     calc(var(--space-4) + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+  background: var(--scrim-bg);
+  backdrop-filter: var(--scrim-blur);
+  -webkit-backdrop-filter: var(--scrim-blur);
   animation: backdrop-in 200ms ease;
 }
 .dialog-backdrop.is-closing {
@@ -505,8 +336,8 @@ textarea.input { min-height: 90px; resize: vertical; }
 }
 .dialog {
   width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
-  padding: var(--space-4); border-radius: var(--radius-lg);
-  background: var(--color-surface); box-shadow: var(--shadow-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-lg);
   animation: dialog-in 480ms var(--motion-entrance-bold);
 }
 .dialog.is-closing {
@@ -520,10 +351,6 @@ textarea.input { min-height: 90px; resize: vertical; }
 @keyframes dialog-out {
   from { opacity: 1; transform: none; }
   to { opacity: 0; transform: translateY(14px) scale(0.95); }
-}
-.dialog-title {
-  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
-  font-size: 20px;
 }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
@@ -563,7 +390,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   width: 34px; height: 34px; border-radius: 50%; padding: 0;
   display: flex; align-items: center; justify-content: center;
   border: none; cursor: pointer;
-  background: color-mix(in srgb, var(--color-neutral-900) 55%, transparent);
+  background: rgba(0, 0, 0, .55);
   color: #fff;
   backdrop-filter: blur(6px);
 }
@@ -582,7 +409,6 @@ textarea.input { min-height: 90px; resize: vertical; }
    ══════════════════════════════════════════════════════════════════════ */
 
 html, body, #root { height: 100%; }
-body { background: var(--bg); }
 
 /* — page scroller — */
 .page-scroll {
@@ -616,7 +442,7 @@ body { background: var(--bg); }
 .empty-state p { max-width: 360px; }
 .no-results {
   text-align: center; padding: var(--space-8) var(--space-4);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
   animation: fade-in 260ms ease;
 }
 
@@ -779,11 +605,6 @@ body { background: var(--bg); }
   padding: 11px 13px 12px;
   height: 132px;
   box-sizing: border-box;
-  /* The unused starter system's bare .card-body (below) sets opacity: 0.8 and
-     flex: 1 — a lower-specificity rule, so it doesn't lose to this one on
-     properties this rule never redeclares. Left alone, every card's name/
-     stats rendered at 80% opacity and flex: 1's flex-basis: 0% fought the
-     fixed height above. */
   opacity: 1;
   flex: none;
 }
@@ -858,7 +679,7 @@ body { background: var(--bg); }
 /* `all: unset` above also wipes outline, and at equal/higher specificity it
    beats the global :focus-visible rule — restore it here or these lose their
    keyboard focus ring entirely. Same for the two rules below. */
-.sub-item-qty-stepper button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.sub-item-qty-stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sub-item-qty-stepper-value {
   min-width: 24px;
   font-family: var(--font-mono); font-size: 13px; font-weight: 700;
@@ -915,8 +736,8 @@ body { background: var(--bg); }
   background: transparent; border: none; touch-action: none;
   color: var(--ink-4); cursor: grab;
 }
-.sub-item-detail-ingredient-grip:hover { color: var(--color-accent); }
-.sub-item-detail-ingredient-row.is-dragging .sub-item-detail-ingredient-grip { cursor: grabbing; color: var(--color-accent); }
+.sub-item-detail-ingredient-grip:hover { color: var(--accent); }
+.sub-item-detail-ingredient-row.is-dragging .sub-item-detail-ingredient-grip { cursor: grabbing; color: var(--accent); }
 .sub-item-detail-ingredient-grip::before { content: ''; position: absolute; inset: -3px; }
 .sub-item-detail-ingredient-name {
   /* flex-grow: 0 (default) on purpose — the qty stepper/add button sits right
@@ -948,7 +769,7 @@ body { background: var(--bg); }
 .ingredient-qty-stepper button:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .ingredient-qty-stepper button:disabled { color: var(--ink-4); cursor: default; }
 .ingredient-qty-stepper button:disabled:hover { background: none; }
-.ingredient-qty-stepper button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ingredient-qty-stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ingredient-qty-add {
   all: unset; box-sizing: border-box; cursor: pointer; flex: none;
   display: flex; align-items: center; justify-content: center;
@@ -959,7 +780,7 @@ body { background: var(--bg); }
   transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
 }
 .ingredient-qty-add:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-2); }
-.ingredient-qty-add:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ingredient-qty-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sub-items-sheet-row-stats { font-size: 11px; color: var(--ink-4); }
 
 /* — floating selection summary bar — Liquid Glass capsule — */
@@ -1079,8 +900,8 @@ body { background: var(--bg); }
 .btn-add-subitem-row {
   display: flex; align-items: center; gap: 6px; width: 100%;
   height: 40px; padding: 0 12px;
-  background: var(--color-surface); border: none; border-radius: var(--radius-sm);
-  color: color-mix(in srgb, var(--color-text) 60%, transparent); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  background: var(--bg-soft); border: none; border-radius: var(--radius-sm);
+  color: color-mix(in srgb, var(--ink) 60%, transparent); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
 
@@ -1097,7 +918,7 @@ body { background: var(--bg); }
 }
 .food-modal-photo img { width: 100%; height: 100%; object-fit: cover; }
 .photo-upload-label { font-size: 12px; color: var(--ink-3); }
-.upload-error { color: var(--color-accent); font-size: 12px; margin-top: -8px; }
+.upload-error { color: var(--bad); font-size: 12px; margin-top: -8px; }
 .dialog-divider { height: 1px; background: var(--rule); margin: 2px 0; }
 .number-fields {
   display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: var(--space-3);
@@ -1111,7 +932,7 @@ body { background: var(--bg); }
 .dialog-actions.space-between { justify-content: space-between; }
 .btn-delete-text {
   background: transparent; border: none; color: var(--bad);
-  font-family: var(--font-heading); font-weight: 800; font-size: 14px;
+  font-family: var(--font-ui); font-weight: 700; font-size: 14px;
   cursor: pointer; padding: var(--space-2) 0;
 }
 .btn-delete-text:hover { text-decoration: underline; }
@@ -1137,7 +958,7 @@ body { background: var(--bg); }
 .sub-items-section { margin-top: var(--space-3); }
 .sub-items-header {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  font-size: 12px; color: color-mix(in srgb, var(--ink) 70%, transparent);
   margin-bottom: var(--space-2);
 }
 .btn-add-subitem { font-size: 12px; padding: 4px var(--space-1); }
@@ -1174,24 +995,24 @@ body { background: var(--bg); }
 }
 .sub-item-row-top[aria-expanded="true"] .sub-item-chevron { transform: rotate(180deg); }
 .sub-item-row-expanded { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.sub-item-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-accent); }
+.sub-item-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
 .sub-item-grip {
   position: relative;
   flex: none; width: 20px; height: 30px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; touch-action: none;
-  color: color-mix(in srgb, var(--color-text) 60%, transparent); cursor: grab;
+  color: color-mix(in srgb, var(--ink) 60%, transparent); cursor: grab;
 }
-.sub-item-grip:hover { color: var(--color-accent); }
-.sub-item-row.is-dragging .sub-item-grip { cursor: grabbing; color: var(--color-accent); }
+.sub-item-grip:hover { color: var(--accent); }
+.sub-item-row.is-dragging .sub-item-grip { cursor: grabbing; color: var(--accent); }
 .sub-item-remove {
   position: relative;
   flex: none; width: 30px; height: 30px; padding: 0;
   display: flex; align-items: center; justify-content: center;
-  background: transparent; border: 1px solid var(--color-divider);
-  color: var(--color-text); cursor: pointer;
+  background: transparent; border: 1px solid var(--rule-strong);
+  color: var(--ink); cursor: pointer;
 }
-.sub-item-remove:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); border-color: var(--color-accent); color: var(--color-accent); }
+.sub-item-remove:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); border-color: var(--accent); color: var(--accent); }
 /* Rows pack grip/checkbox/input/qty/remove tightly (6px gaps) — an
    ::before this small only closes the dead zone between neighbours
    without reaching into their own tap targets. */
@@ -1215,11 +1036,11 @@ body { background: var(--bg); }
 }
 .sub-item-qty-wrap { flex: none; display: flex; align-items: center; gap: 2px; }
 .sub-item-qty-wrap .sub-item-qty-x {
-  font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  font-size: 12px; color: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 .sub-item-row-expanded .input.sub-item-qty { flex: none; width: 44px; text-align: center; padding-left: 4px; padding-right: 4px; }
 .sub-item-qty-hint {
-  font-size: 11px; color: color-mix(in srgb, var(--color-text) 55%, transparent);
+  font-size: 11px; color: color-mix(in srgb, var(--ink) 55%, transparent);
   padding-left: 2px;
 }
 .sub-items-total {
@@ -1228,11 +1049,11 @@ body { background: var(--bg); }
 
 .ingredients-section {
   margin-top: 2px; padding-left: var(--space-3);
-  border-left: 2px solid var(--color-divider);
+  border-left: 2px solid var(--rule-strong);
 }
 .ingredients-header {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  font-size: 11px; color: color-mix(in srgb, var(--ink) 60%, transparent);
 }
 .btn-add-ingredient { font-size: 11px; padding: 3px 8px; height: auto; }
 .ingredients { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
@@ -1249,10 +1070,10 @@ body { background: var(--bg); }
   flex: none; width: 16px; height: 26px; padding: 0;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; touch-action: none;
-  color: color-mix(in srgb, var(--color-text) 60%, transparent); cursor: grab;
+  color: color-mix(in srgb, var(--ink) 60%, transparent); cursor: grab;
 }
-.ingredient-grip:hover { color: var(--color-accent); }
-.ingredient-row.is-dragging .ingredient-grip { cursor: grabbing; color: var(--color-accent); }
+.ingredient-grip:hover { color: var(--accent); }
+.ingredient-row.is-dragging .ingredient-grip { cursor: grabbing; color: var(--accent); }
 .ingredient-grip::before { content: ''; position: absolute; inset: -3px; }
 .ingredient-row-numbers {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
@@ -1262,7 +1083,7 @@ body { background: var(--bg); }
 .dialog-close {
   position: relative;
   background: transparent; border: none; cursor: pointer;
-  color: var(--color-text); padding: 4px;
+  color: var(--ink); padding: 4px;
   display: flex; align-items: center; justify-content: center;
 }
 .dialog-close::before {

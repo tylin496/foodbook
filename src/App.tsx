@@ -192,21 +192,38 @@ function FoodBook({
   }, [displayItems, search])
 
   const [sortMode, setSortMode] = useState<SortMode>('manual')
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
+
+  const handleSortPillClick = (mode: SortMode) => {
+    captureRects()
+    if (mode === 'manual') {
+      setSortMode('manual')
+      return
+    }
+    if (sortMode === mode) {
+      setSortDir((dir) => (dir === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortMode(mode)
+      setSortDir('desc')
+    }
+  }
 
   // Manual is the stored/drag order as-is; the other modes rank by each
   // item's own totals (protein efficiency = protein per kcal, so a lean,
-  // high-protein food ranks above a calorie-dense one).
+  // high-protein food ranks above a calorie-dense one). Clicking an already
+  // active mode again flips sortDir to reverse the ranking.
   const sortedItems = useMemo(() => {
     if (sortMode === 'manual') return filteredItems
+    const dirSign = sortDir === 'desc' ? 1 : -1
     const ranked = filteredItems.map((item) => ({ item, totals: getFoodTotals(item) }))
     ranked.sort((a, b) => {
-      if (sortMode === 'calories') return b.totals.calories - a.totals.calories
+      if (sortMode === 'calories') return (b.totals.calories - a.totals.calories) * dirSign
       const effA = a.totals.calories > 0 ? a.totals.protein / a.totals.calories : 0
       const effB = b.totals.calories > 0 ? b.totals.protein / b.totals.calories : 0
-      return effB - effA
+      return (effB - effA) * dirSign
     })
     return ranked.map(({ item }) => item)
-  }, [filteredItems, sortMode])
+  }, [filteredItems, sortMode, sortDir])
 
   const reorderEnabled = isOwner && search.trim().length === 0 && sortMode === 'manual'
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -809,6 +826,9 @@ function FoodBook({
                   captureRects()
                   setSearch(e.target.value)
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') e.currentTarget.blur()
+                }}
                 placeholder="搜尋食物名稱"
               />
               {search ? (
@@ -867,23 +887,23 @@ function FoodBook({
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'manual' ? ' is-active' : ''}`}
-                onClick={() => setSortMode('manual')}
+                onClick={() => handleSortPillClick('manual')}
               >
                 手動
               </button>
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'calories' ? ' is-active' : ''}`}
-                onClick={() => setSortMode('calories')}
+                onClick={() => handleSortPillClick('calories')}
               >
-                熱量
+                熱量{sortMode === 'calories' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
               </button>
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'protein' ? ' is-active' : ''}`}
-                onClick={() => setSortMode('protein')}
+                onClick={() => handleSortPillClick('protein')}
               >
-                蛋白質效率
+                蛋白質效率{sortMode === 'protein' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
               </button>
             </div>
           )}
