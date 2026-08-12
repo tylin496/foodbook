@@ -1166,6 +1166,7 @@ html, body, #root { height: 100%; }
 }
 .sub-items-sheet-row:not(.is-excluded) .sub-items-sheet-checkbox {
   background: var(--accent-strong); box-shadow: none;
+  animation: lo-pop var(--dur-pop) var(--ease-pop);
 }
 .sub-items-sheet-checkbox:disabled { cursor: default; opacity: .5; }
 
@@ -1177,6 +1178,7 @@ html, body, #root { height: 100%; }
 }
 .sub-item-detail-ingredient-row:not(.is-excluded) .sub-item-detail-ingredient-checkbox {
   background: var(--accent-strong); box-shadow: none;
+  animation: lo-pop var(--dur-pop) var(--ease-pop);
 }
 
 /* Desktop: the chip sheet reads as a normal centered dialog instead of a

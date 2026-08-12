@@ -466,7 +466,15 @@ function FoodBook({
     setSubwayOpen(true)
   }
 
-  const clearSelection = () => setSelectedIds(new Set())
+  // A card selected via keyboard (Tab + Enter/Space) keeps its :focus-visible
+  // ring after Escape/cmd+D/清除 clears the selection — same --accent color as
+  // the "selected" box-shadow, so it reads as still selected. Blur it so the
+  // ring actually goes away with the selection.
+  const clearSelection = () => {
+    const active = document.activeElement as HTMLElement | null
+    if (active?.classList.contains('food-card')) active.blur()
+    setSelectedIds(new Set())
+  }
 
   const selectAll = () => setSelectedIds(new Set(filteredItems.map((item) => item.id)))
 

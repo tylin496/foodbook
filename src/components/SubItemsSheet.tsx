@@ -4,6 +4,7 @@ import { Check, GripVertical, Minus, Plus, X } from 'lucide-react'
 import type { FoodSubItem, IngredientOverrides, SubItemOverrides } from '../types'
 import { getEffectiveIngredientQty, getEffectiveSubItemQty, getSubItemTotals } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
+import { useCountUp } from '../useCountUp'
 import { useDialogDismiss } from '../useDialogDismiss'
 import { useFocusTrap } from '../useFocusTrap'
 
@@ -50,6 +51,8 @@ export function SubItemsSheet({
   const backdropProps = useDialogDismiss(onClose)
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, true)
+  const displayCalories = useCountUp(totals.calories)
+  const displayProtein = useCountUp(totals.protein)
 
   const rows = subItems.map((sub) => ({ sub, activeQty: getEffectiveSubItemQty(sub, guestOverrides) }))
   const selectedCount = rows.filter(({ activeQty }) => activeQty > 0).length
@@ -426,11 +429,11 @@ export function SubItemsSheet({
         <div className="sub-items-sheet-footer">
           <div className="sub-items-sheet-footer-stats">
             <div>
-              <div className="sub-items-sheet-footer-value is-calories">{formatAmount(totals.calories)}</div>
+              <div className="sub-items-sheet-footer-value is-calories">{formatAmount(displayCalories)}</div>
               <div className="sub-items-sheet-footer-label">KCAL</div>
             </div>
             <div>
-              <div className="sub-items-sheet-footer-value is-protein">{formatAmount(totals.protein)}</div>
+              <div className="sub-items-sheet-footer-value is-protein">{formatAmount(displayProtein)}</div>
               <div className="sub-items-sheet-footer-label">蛋白 G</div>
             </div>
           </div>

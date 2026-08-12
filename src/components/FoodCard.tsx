@@ -3,6 +3,7 @@ import { Calculator, Camera, Check, Pencil } from 'lucide-react'
 import type { FoodItem, IngredientOverrides, SubItemOverrides } from '../types'
 import { getEffectiveBaseQty, getEffectiveSubItemQty, getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
+import { useCountUp } from '../useCountUp'
 import { SubItemsSheet } from './SubItemsSheet'
 
 const DETAIL_CLOSE_MS = 180
@@ -54,6 +55,8 @@ export function FoodCard({
   guestIngredientOverrides,
 }: FoodCardProps) {
   const totals = getFoodTotals(item, guestOverrides, guestIngredientOverrides)
+  const displayCalories = useCountUp(totals.calories)
+  const displayProtein = useCountUp(totals.protein)
   const subItems = item.subItems ?? []
   // Without sub-items the weight itself labels the portion, so it becomes the
   // lone chip instead of being repeated in the meta row.
@@ -383,12 +386,12 @@ export function FoodCard({
         )}
         <div className="stat-grid">
           <div className="stat">
-            <div className="stat-value">{formatAmount(totals.calories)}</div>
+            <div className="stat-value">{formatAmount(displayCalories)}</div>
             <div className="stat-label">KCAL</div>
           </div>
           <div className="stat-rule" />
           <div className="stat">
-            <div className="stat-value is-protein">{formatAmount(totals.protein)}</div>
+            <div className="stat-value is-protein">{formatAmount(displayProtein)}</div>
             <div className="stat-label">蛋白 G</div>
           </div>
         </div>
