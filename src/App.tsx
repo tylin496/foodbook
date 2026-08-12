@@ -25,6 +25,8 @@ const SUBWAY_ORIGIN = new URL(SUBWAY_CALCULATOR_URL).origin
 
 type SubwayResult = { hasSelection: boolean; mainName?: string; kcal?: number; protein?: number }
 type SortMode = 'manual' | 'calories' | 'protein'
+const SORT_MODE_KEY = 'food-diary:sort-mode'
+const SORT_DIR_KEY = 'food-diary:sort-dir'
 
 export default function App() {
   const { user, loading: authLoading, signIn, logOut, signInError } = useAuth()
@@ -191,10 +193,33 @@ function FoodBook({
     })
   }, [displayItems, search])
 
-  const [sortMode, setSortMode] = useState<SortMode>('manual')
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    try {
+      const cached = localStorage.getItem(SORT_MODE_KEY)
+      return cached === 'calories' || cached === 'protein' ? cached : 'manual'
+    } catch {
+      return 'manual'
+    }
+  })
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>(() => {
+    try {
+      return localStorage.getItem(SORT_DIR_KEY) === 'asc' ? 'asc' : 'desc'
+    } catch {
+      return 'desc'
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_MODE_KEY, sortMode)
+      localStorage.setItem(SORT_DIR_KEY, sortDir)
+    } catch {
+      // storage full or unavailable — sort choice just won't persist
+    }
+  }, [sortMode, sortDir])
 
   const handleSortPillClick = (mode: SortMode) => {
+    bulkFlipRef.current = true
     captureRects()
     if (mode === 'manual') {
       setSortMode('manual')
@@ -233,6 +258,11 @@ function FoodBook({
   const foodGridRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const prevRectsRef = useRef<Record<string, DOMRect> | null>(null)
+  // Sort-mode changes can reshuffle the whole grid at once (every card moving
+  // a different 2D distance), unlike drag-reorder where usually 1-2 cards
+  // shift. The bouncy drag-settle easing overshooting on every card
+  // simultaneously reads as chaotic, so bulk reflows use a plain ease-out.
+  const bulkFlipRef = useRef(false)
   const dragMetaRef = useRef<{ id: string; grabOffsetX: number; grabOffsetY: number } | null>(null)
   const lastPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const springOffsetRef = useRef<{ x: number; y: number } | null>(null)
@@ -310,6 +340,10 @@ function FoodBook({
       const rects = prevRectsRef.current
       prevRectsRef.current = null
       const dragId = dragMetaRef.current?.id
+      const transition = bulkFlipRef.current
+        ? 'transform 320ms var(--motion-entrance-bold)'
+        : 'transform var(--motion-flip-bold)'
+      bulkFlipRef.current = false
       if (!reducedMotion) {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
@@ -325,7 +359,7 @@ function FoodBook({
               el.style.transition = 'none'
               el.style.transform = `translate(${dx}px,${dy}px)`
               requestAnimationFrame(() => {
-                el.style.transition = 'transform var(--motion-flip-bold)'
+                el.style.transition = transition
                 el.style.transform = ''
                 const handleEnd = () => {
                   el.style.transition = ''
