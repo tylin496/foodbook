@@ -9,7 +9,14 @@
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- NOT black-translucent: on iPhone that style pins the web view to the top
+         of the screen but sizes it as if the status bar were still reserved, so
+         window.innerHeight comes out one status-bar short (measured 844 vs a 912
+         screen) and iOS paints the leftover strip at the BOTTOM — a flat block no
+         CSS can reach. "default" lays the view out from below the status bar down
+         to the screen edge instead. Changing this requires re-adding the home
+         screen icon; iOS bakes it in at install time. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Foodbook" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f4f6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1a" />
