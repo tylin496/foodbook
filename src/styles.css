@@ -113,7 +113,10 @@
 }
 
 body {
-  background: var(--bg);
+  /* Matches .page-scroll's own background (not the flat --bg) so an iOS
+     rubber-band overscroll at the top of the list reveals the same gradient
+     underneath instead of a mismatched flat-grey band flashing in. */
+  background: var(--page-bg);
   color: var(--ink);
   font-family: var(--font-ui);
 }
