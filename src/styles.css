@@ -112,11 +112,14 @@
   --shadow-lg: 0 12px 32px color-mix(in srgb, #000 60%, transparent);
 }
 
-body {
-  /* Matches .page-scroll's own background (not the flat --bg) so an iOS
-     rubber-band overscroll at the top of the list reveals the same gradient
-     underneath instead of a mismatched flat-grey band flashing in. */
+/* html and body both carry .page-scroll's own gradient (not the flat --bg),
+   mirroring LiftOS's global.css — an iOS rubber-band overscroll can reveal
+   either one above the scrolled content, and a flat-grey band flashing in
+   there reads as broken chrome instead of the page continuing underneath. */
+html, body {
   background: var(--page-bg);
+}
+body {
   color: var(--ink);
   font-family: var(--font-ui);
 }
