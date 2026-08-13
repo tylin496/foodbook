@@ -11,8 +11,9 @@ import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
-import { formatItemsAsText, generateId, sortBySelected, toNumber } from './utils'
+import { formatItemsAsText, generateId, roundAmount, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
+import { embedContext, postSelectionTotals } from './embed'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
@@ -70,7 +71,7 @@ function FoodBook({
     setIngredientQty: setGuestIngredientQty,
   } = useGuestOverrides()
   const { confirm, confirmDialogProps } = useConfirm()
-  useTheme()
+  useTheme(embedContext?.theme ?? null)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -480,6 +481,19 @@ function FoodBook({
       ),
     [selectedItems, isOwner, guestOverrides, guestIngredientOverrides],
   )
+
+  // Embedded in LiftOS: mirror the running selection out to the host on every
+  // change, the same way the Subway calculator mirrors its build to us. LiftOS
+  // decides when to commit it — nothing here is a send.
+  useEffect(() => {
+    if (!embedContext) return
+    postSelectionTotals(embedContext.parentOrigin, {
+      count: selectedItems.length,
+      calories: roundAmount(totals.calories),
+      protein: roundAmount(totals.protein),
+      weight: roundAmount(totals.weight),
+    })
+  }, [selectedItems.length, totals.calories, totals.protein, totals.weight])
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -917,12 +931,20 @@ function FoodBook({
                   </button>
                 </>
               ) : (
-                <div className="signin-wrap">
-                  {signInError && <div className="upload-error">登入失敗，請重試</div>}
-                  <button type="button" className="btn btn-secondary" onClick={onSignIn}>
-                    使用 Google 登入
-                  </button>
-                </div>
+                /* Embedded in LiftOS the sign-in is hidden rather than broken:
+                   Google's popup can't run from a cross-origin frame, and
+                   browsers partition storage per top-level site so the session
+                   wouldn't be the one the standalone app holds anyway. Reading
+                   (which is all the embed is for) needs no sign-in; LiftOS's
+                   sheet links out to the real app for editing. */
+                !embedContext && (
+                  <div className="signin-wrap">
+                    {signInError && <div className="upload-error">登入失敗，請重試</div>}
+                    <button type="button" className="btn btn-secondary" onClick={onSignIn}>
+                      使用 Google 登入
+                    </button>
+                  </div>
+                )
               )}
             </div>
           </header>
