@@ -404,6 +404,23 @@ export function FoodModal({
     const dragging = dragMetaRef.current
     if (!dragging || !subItemsRef.current) return
     lastPointerYRef.current = e.clientY
+
+    // Dragging over another (expanded) sub-item's ingredients zone previews a
+    // convert-to-ingredient drop instead of reordering the sub-items list.
+    const crossSubId = findIngredientsSectionSubIdAt(e.clientX, e.clientY, dragging.id)
+    if (crossSubId) {
+      const container = ingredientContainersRef.current.get(crossSubId)
+      const rows = container ? Array.from(container.querySelectorAll<HTMLElement>('[data-ingredient-id]')) : []
+      const index = indexForPointerY(rows, e.clientY)
+      setConvertTarget((current) =>
+        current?.kind === 'toIngredient' && current.subId === crossSubId && current.index === index
+          ? current
+          : { kind: 'toIngredient', subId: crossSubId, index },
+      )
+      return
+    }
+    if (convertTarget !== null) setConvertTarget(null)
+
     const draggedIndex = draft.subItems.findIndex((sub) => sub.id === dragging.id)
     if (draggedIndex === -1) return
     const rows = Array.from(subItemsRef.current.querySelectorAll<HTMLElement>('[data-sub-item-id]'))
@@ -438,8 +455,12 @@ export function FoodModal({
         }, 340)
       }
     }
+    if (meta && convertTarget?.kind === 'toIngredient') {
+      convertSubItemToIngredient(meta.id, convertTarget.subId, convertTarget.index)
+    }
     dragMetaRef.current = null
     setDraggingSubItemId(null)
+    setConvertTarget(null)
   }
 
   useEffect(() => {
@@ -455,6 +476,9 @@ export function FoodModal({
   const ingredientDragRafRef = useRef<number | null>(null)
   const prevIngredientRectsRef = useRef<{ subId: string; rects: Record<string, DOMRect> } | null>(null)
   const [draggingIngredientId, setDraggingIngredientId] = useState<string | null>(null)
+  const [convertTarget, setConvertTarget] = useState<
+    { kind: 'toIngredient'; subId: string; index: number } | { kind: 'toSubItem'; index: number } | null
+  >(null)
 
   const findIngredientRowEl = (subId: string, id: string): HTMLElement | null =>
     ingredientContainersRef.current.get(subId)?.querySelector<HTMLElement>(`[data-ingredient-id="${CSS.escape(id)}"]`) ??
@@ -574,6 +598,21 @@ export function FoodModal({
     const container = dragging ? ingredientContainersRef.current.get(dragging.subId) : null
     if (!dragging || !container) return
     lastIngredientPointerYRef.current = e.clientY
+
+    // Dragging out of every ingredients zone and over the sub-items list
+    // previews a convert-to-sub-item drop instead of reordering ingredients.
+    if (isOverTopLevelSubItemsZone(e.clientX, e.clientY)) {
+      const rows = subItemsRef.current
+        ? Array.from(subItemsRef.current.querySelectorAll<HTMLElement>('[data-sub-item-id]'))
+        : []
+      const index = indexForPointerY(rows, e.clientY)
+      setConvertTarget((current) =>
+        current?.kind === 'toSubItem' && current.index === index ? current : { kind: 'toSubItem', index },
+      )
+      return
+    }
+    if (convertTarget !== null) setConvertTarget(null)
+
     const sub = draft.subItems.find((s) => s.id === dragging.subId)
     const ingredients = sub?.ingredients ?? []
     const draggedIndex = ingredients.findIndex((ing) => ing.id === dragging.id)
@@ -610,13 +649,99 @@ export function FoodModal({
         }, 340)
       }
     }
+    if (meta && convertTarget?.kind === 'toSubItem') {
+      convertIngredientToSubItem(meta.subId, meta.id, convertTarget.index)
+    }
     ingredientDragMetaRef.current = null
     setDraggingIngredientId(null)
+    setConvertTarget(null)
   }
 
   useEffect(() => {
     return () => stopIngredientSpringLoop()
   }, [])
+
+  // Cross-zone conversion: a sub-item's grip dropped onto another sub-item's
+  // ingredients zone (or an ingredient's grip dropped onto the sub-items
+  // list) converts it in place. Shared by both drag systems above since only
+  // one grip can be held at a time.
+  const indexForPointerY = (rows: HTMLElement[], clientY: number) => {
+    for (let i = 0; i < rows.length; i++) {
+      if (clientY < rows[i].getBoundingClientRect().top + rows[i].getBoundingClientRect().height / 2) return i
+    }
+    return rows.length
+  }
+
+  // The ingredients zone renders (with a ref) even when empty, so it's a
+  // valid drop target as soon as its sub-item is expanded.
+  const findIngredientsSectionSubIdAt = (clientX: number, clientY: number, excludeSubId: string) => {
+    for (const [subId, el] of ingredientContainersRef.current) {
+      if (subId === excludeSubId) continue
+      const rect = el.getBoundingClientRect()
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return subId
+    }
+    return null
+  }
+
+  const isOverTopLevelSubItemsZone = (clientX: number, clientY: number) => {
+    const container = subItemsRef.current
+    if (!container) return false
+    const rect = container.getBoundingClientRect()
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false
+    for (const [, el] of ingredientContainersRef.current) {
+      const r = el.getBoundingClientRect()
+      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) return false
+    }
+    return true
+  }
+
+  // A sub-item dropped as an ingredient can't keep its own nested ingredients
+  // (no double nesting) — they're promoted to siblings right after it instead
+  // of silently disappearing.
+  const convertSubItemToIngredient = (subItemId: string, targetSubId: string, atIndex: number) => {
+    const source = draft.subItems.find((sub) => sub.id === subItemId)
+    const target = draft.subItems.find((sub) => sub.id === targetSubId)
+    if (!source || !target || source.id === target.id) return
+    const converted: FoodIngredientDraft = {
+      id: source.id,
+      name: source.name,
+      weight: source.weight,
+      protein: source.protein,
+      calories: source.calories,
+      selected: source.selected,
+      qty: source.qty,
+    }
+    const nextIngredients = [...(target.ingredients ?? [])]
+    nextIngredients.splice(atIndex, 0, converted, ...(source.ingredients ?? []))
+    onChange({
+      ...draft,
+      subItems: draft.subItems
+        .filter((sub) => sub.id !== subItemId)
+        .map((sub) => (sub.id === targetSubId ? { ...sub, ingredients: nextIngredients } : sub)),
+    })
+    setExpandedSubId(targetSubId)
+  }
+
+  const convertIngredientToSubItem = (subId: string, ingredientId: string, atIndex: number) => {
+    const sub = draft.subItems.find((s) => s.id === subId)
+    const source = sub?.ingredients?.find((ing) => ing.id === ingredientId)
+    if (!sub || !source) return
+    const converted: FoodSubItemDraft = {
+      id: source.id,
+      name: source.name,
+      weight: source.weight,
+      protein: source.protein,
+      calories: source.calories,
+      selected: source.selected,
+      qty: source.qty,
+    }
+    const nextSubItems = draft.subItems.map((s) =>
+      s.id === subId ? { ...s, ingredients: (s.ingredients ?? []).filter((ing) => ing.id !== ingredientId) } : s,
+    )
+    nextSubItems.splice(atIndex, 0, converted)
+    onChange({ ...draft, subItems: nextSubItems })
+    setExpandedSubId(converted.id)
+  }
 
   const hasSubItems = draft.subItems.length > 0
   const selectedSubItems = draft.subItems.filter((sub) => sub.selected)
@@ -762,7 +887,10 @@ export function FoodModal({
           )}
 
           {draft.subItems.length > 0 && (
-            <div className="sub-items" ref={subItemsRef}>
+            <div
+              className={`sub-items${convertTarget?.kind === 'toSubItem' ? ' is-convert-target' : ''}`}
+              ref={subItemsRef}
+            >
               {draft.subItems.map((sub) => {
                 const subTotals = subItemTotals(sub)
                 const expanded = expandedSubId === sub.id
@@ -899,7 +1027,13 @@ export function FoodModal({
                       </div>
                     )}
 
-                    <div className="ingredients-section">
+                    <div
+                      className={`ingredients-section${convertTarget?.kind === 'toIngredient' && convertTarget.subId === sub.id ? ' is-convert-target' : ''}`}
+                      ref={(el) => {
+                        if (el) ingredientContainersRef.current.set(sub.id, el)
+                        else ingredientContainersRef.current.delete(sub.id)
+                      }}
+                    >
                       <div className="ingredients-header">
                         <span>成分 勾選要計入加總的項目</span>
                         <button
@@ -911,14 +1045,8 @@ export function FoodModal({
                           新增成分
                         </button>
                       </div>
-                      {(sub.ingredients?.length ?? 0) > 0 && (
-                        <div
-                          className="ingredients"
-                          ref={(el) => {
-                            if (el) ingredientContainersRef.current.set(sub.id, el)
-                            else ingredientContainersRef.current.delete(sub.id)
-                          }}
-                        >
+                      {(sub.ingredients?.length ?? 0) > 0 ? (
+                        <div className="ingredients">
                           {sub.ingredients!.map((ing) => (
                             <div
                               className={`ingredient-row${ing.selected ? '' : ' is-excluded'}${ing.id === draggingIngredientId ? ' is-dragging' : ''}`}
@@ -1023,6 +1151,9 @@ export function FoodModal({
                             </div>
                           ))}
                         </div>
+                      ) : (
+                        convertTarget?.kind === 'toIngredient' &&
+                        convertTarget.subId === sub.id && <div className="ingredients-empty-hint">拖放到這裡變成成分</div>
                       )}
                     </div>
                     </div>

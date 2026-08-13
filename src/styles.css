@@ -964,6 +964,12 @@ html, body, #root { height: 100%; }
 .btn-add-subitem { font-size: 12px; padding: 4px var(--space-1); }
 
 .sub-items { display: flex; flex-direction: column; gap: var(--space-2); }
+.sub-items.is-convert-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
 .sub-item-row {
   display: flex; flex-direction: column;
   padding: 10px; background: var(--bg-soft);
@@ -1051,12 +1057,22 @@ html, body, #root { height: 100%; }
   margin-top: 2px; padding-left: var(--space-3);
   border-left: 2px solid var(--rule-strong);
 }
+.ingredients-section.is-convert-target {
+  border-left-color: var(--accent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
 .ingredients-header {
   display: flex; align-items: center; justify-content: space-between;
   font-size: 11px; color: color-mix(in srgb, var(--ink) 60%, transparent);
 }
 .btn-add-ingredient { font-size: 11px; padding: 3px 8px; height: auto; }
 .ingredients { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.ingredients-empty-hint {
+  margin-top: 6px; padding: 10px; text-align: center;
+  font-size: 11px; color: var(--accent);
+  border: 1px dashed var(--accent); border-radius: var(--radius-sm);
+}
 .ingredient-row {
   display: flex; flex-direction: column; gap: 6px;
 }
