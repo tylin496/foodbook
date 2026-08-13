@@ -13,6 +13,7 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
 import { formatItemsAsText, generateId, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
+import { ViewportProbe } from './components/ViewportProbe'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
@@ -852,6 +853,7 @@ function FoodBook({
 
   return (
     <>
+      <ViewportProbe />
       <div className="page-scroll">
         <div className="page-content">
           <header className="page-topbar">
