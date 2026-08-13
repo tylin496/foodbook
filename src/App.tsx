@@ -868,15 +868,11 @@ function FoodBook({
     <>
       <div className="page-scroll">
         <div className="page-content">
-          <header className={`page-topbar${embedContext ? ' is-embedded' : ''}`}>
-            {/* Embedded in LiftOS the sheet's own header already says FoodBook,
-                so this one would just be a second title on the same screen. */}
-            {!embedContext && (
-              <div className="title-row">
-                <h1>Foodbook</h1>
-                <span className="item-count">{items.length} 筆</span>
-              </div>
-            )}
+          <header className="page-topbar">
+            <div className="title-row">
+              <h1>Foodbook</h1>
+              <span className="item-count">{items.length} 筆</span>
+            </div>
 
             <div className="search-bar">
               <Search size={14} strokeWidth={2} />
