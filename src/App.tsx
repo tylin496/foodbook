@@ -869,10 +869,14 @@ function FoodBook({
       <div className="page-scroll">
         <div className="page-content">
           <header className="page-topbar">
-            <div className="title-row">
-              <h1>Foodbook</h1>
-              <span className="item-count">{items.length} 筆</span>
-            </div>
+            {/* Embedded in LiftOS the sheet's own header already says FoodBook,
+                so this one would just be a second title on the same screen. */}
+            {!embedContext && (
+              <div className="title-row">
+                <h1>Foodbook</h1>
+                <span className="item-count">{items.length} 筆</span>
+              </div>
+            )}
 
             <div className="search-bar">
               <Search size={14} strokeWidth={2} />
@@ -931,20 +935,17 @@ function FoodBook({
                   </button>
                 </>
               ) : (
-                /* Embedded in LiftOS the sign-in is hidden rather than broken:
-                   Google's popup can't run from a cross-origin frame, and
-                   browsers partition storage per top-level site so the session
-                   wouldn't be the one the standalone app holds anyway. Reading
-                   (which is all the embed is for) needs no sign-in; LiftOS's
-                   sheet links out to the real app for editing. */
-                !embedContext && (
-                  <div className="signin-wrap">
-                    {signInError && <div className="upload-error">登入失敗，請重試</div>}
-                    <button type="button" className="btn btn-secondary" onClick={onSignIn}>
-                      使用 Google 登入
-                    </button>
-                  </div>
-                )
+                /* Also offered inside the LiftOS frame — editing there needs it.
+                   The popup works because that iframe allows popups; the catch
+                   is that browsers partition storage per top-level site, so this
+                   session is separate from the standalone app's and may need
+                   signing in again. */
+                <div className="signin-wrap">
+                  {signInError && <div className="upload-error">登入失敗，請重試</div>}
+                  <button type="button" className="btn btn-secondary" onClick={onSignIn}>
+                    使用 Google 登入
+                  </button>
+                </div>
               )}
             </div>
           </header>
