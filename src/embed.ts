@@ -9,11 +9,15 @@
 // Foodbook share an origin. LiftOS does NOT, so the totals go to an explicit
 // allowlisted parent — a wildcard here would hand them to any site that framed
 // this page.
-const ALLOWED_PARENTS = [
-  'https://liftos.pages.dev',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-]
+const LIFTOS_ORIGIN = 'https://liftos.pages.dev'
+// Vite picks the next free port when 5173 is taken, so a dev entry can't be a
+// fixed string. Any loopback port is allowed — reaching this page from one
+// already means local code on the user's own machine.
+const LOCAL_PARENT = /^http:\/\/(localhost|127\.0\.0\.1):\d{2,5}$/
+
+function isAllowedParent(origin: string): boolean {
+  return origin === LIFTOS_ORIGIN || LOCAL_PARENT.test(origin)
+}
 
 export interface EmbedContext {
   parentOrigin: string
@@ -28,7 +32,7 @@ function readEmbedContext(): EmbedContext | null {
   const params = new URLSearchParams(window.location.search)
   if (params.get('embed') !== 'liftos') return null
   const parentOrigin = params.get('parent') ?? ''
-  if (!ALLOWED_PARENTS.includes(parentOrigin)) return null
+  if (!isAllowedParent(parentOrigin)) return null
   const theme = params.get('theme')
   return { parentOrigin, theme: theme === 'dark' || theme === 'light' ? theme : null }
 }
