@@ -15,6 +15,12 @@ description: >-
 
 # iOS edge-to-edge chrome
 
+**Scope:** this file is Foodbook's current setup, its history, and its token
+names. The general iOS rules behind it — why an in-app scrim is wrong, why
+`100%`/`100dvh` come up short, how to probe an installed app — live in the
+user-level `ios-edge-to-edge-chrome` skill, which applies to any standalone
+PWA. Keep general findings there and Foodbook specifics here.
+
 Foodbook is used as an installed iOS home-screen app. The whole design assumes
 the page runs edge to edge: content draws under the status bar clock and behind
 the home indicator, and **nothing in-app paints a band at either edge**. Two
