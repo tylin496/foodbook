@@ -414,11 +414,23 @@ textarea.input { min-height: 90px; resize: vertical; }
    App-specific layout — food grid app (not part of the base design system)
    ══════════════════════════════════════════════════════════════════════ */
 
-html, body, #root { height: 100%; }
+/* Full-viewport height, mirroring LiftOS's --app-height token. dvh in the
+   browser (tracks Safari's collapsing toolbar); vh in standalone, where iOS
+   under black-translucent reports a cold-start viewport that excludes the
+   status-bar band — 100% and 100dvh both resolve to it, leaving the page one
+   status bar short and a dead strip of web-view background along the bottom
+   edge that no page background can reach. 100vh is correct from launch, and
+   with no dynamic toolbars in standalone the two are otherwise equal. */
+:root { --app-height: 100dvh; }
+@media (display-mode: standalone) {
+  :root { --app-height: 100vh; }
+}
+
+html, body, #root { height: var(--app-height); }
 
 /* — page scroller — */
 .page-scroll {
-  height: 100%; overflow-y: auto;
+  height: var(--app-height); overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: calc(28px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
@@ -873,7 +885,7 @@ html, body, #root { height: 100%; }
      both edges) — otherwise this max-height lets the dialog grow taller than
      the room the centered backdrop actually gives it, and the leftover gets
      squeezed out as a visible gap below the dialog. */
-  max-height: calc(100vh - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(var(--app-height) - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
   border-radius: var(--radius-card);
   background: var(--bg-card);
@@ -1219,7 +1231,7 @@ html, body, #root { height: 100%; }
       calc(var(--space-4) + env(safe-area-inset-bottom));
   }
   .dialog.sub-items-sheet {
-    max-height: calc(100vh - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(var(--app-height) - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     border-radius: var(--radius-card);
     animation: dialog-in 480ms var(--motion-entrance-bold);
   }
