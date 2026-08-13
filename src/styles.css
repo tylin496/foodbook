@@ -869,7 +869,12 @@ html, body, #root { height: 100%; }
    same LiftOS language as the reskinned card/topbar above. — */
 .dialog {
   width: min(440px, 100%); gap: 16px; padding: 18px;
-  max-height: calc(100vh - var(--space-4) * 2); overflow-y: auto;
+  /* Must match .dialog-backdrop's own padding calc (space-4 + safe-area on
+     both edges) — otherwise this max-height lets the dialog grow taller than
+     the room the centered backdrop actually gives it, and the leftover gets
+     squeezed out as a visible gap below the dialog. */
+  max-height: calc(100vh - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto;
   border-radius: var(--radius-card);
   background: var(--bg-card);
   /* --bg-card is translucent in dark mode (for the frosted food-card look),
@@ -1214,7 +1219,7 @@ html, body, #root { height: 100%; }
       calc(var(--space-4) + env(safe-area-inset-bottom));
   }
   .dialog.sub-items-sheet {
-    max-height: calc(100vh - var(--space-4) * 2);
+    max-height: calc(100vh - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     border-radius: var(--radius-card);
     animation: dialog-in 480ms var(--motion-entrance-bold);
   }
