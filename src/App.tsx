@@ -1023,7 +1023,6 @@ function FoodBook({
 
       <SelectionBar
         count={selectedItems.length}
-        totalWeight={totals.weight}
         totalProtein={totals.protein}
         totalCalories={totals.calories}
         onClear={clearSelection}

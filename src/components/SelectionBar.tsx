@@ -4,7 +4,6 @@ import { useCountUp } from '../useCountUp'
 
 interface SelectionBarProps {
   count: number
-  totalWeight: number
   totalProtein: number
   totalCalories: number
   onClear: () => void
@@ -13,7 +12,6 @@ interface SelectionBarProps {
 
 export function SelectionBar({
   count,
-  totalWeight,
   totalProtein,
   totalCalories,
   onClear,
@@ -23,7 +21,6 @@ export function SelectionBar({
   const visible = count > 0
   const [rendered, setRendered] = useState(visible)
 
-  const displayWeight = useCountUp(totalWeight)
   const displayProtein = useCountUp(totalProtein)
   const displayCalories = useCountUp(totalCalories)
 
@@ -57,11 +54,6 @@ export function SelectionBar({
         <div className="stat">
           <div className="value">{Math.round(displayProtein)}</div>
           <div className="label">蛋白質 g</div>
-        </div>
-        <div className="stat-rule" />
-        <div className="stat">
-          <div className="value">{Math.round(displayWeight)}</div>
-          <div className="label">重量 g</div>
         </div>
       </div>
       <div className="icon-actions">
