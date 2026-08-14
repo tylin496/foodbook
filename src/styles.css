@@ -958,7 +958,7 @@ html, body, #root { height: var(--app-height); }
 .upload-error { color: var(--bad); font-size: 12px; margin-top: -8px; }
 .dialog-divider { height: 1px; background: var(--rule); margin: 2px 0; }
 .number-fields {
-  display: grid; grid-template-columns: 1.15fr 1.15fr .9fr; gap: var(--space-3);
+  display: grid; grid-template-columns: .9fr 1.15fr 1.15fr; gap: var(--space-3);
 }
 .number-fields .field > label {
   /* the narrower weight column can't fit "重量 (g) 自動加總" at the default

@@ -825,6 +825,20 @@ export function FoodModal({
 
         <div className="number-fields">
           <div className="field">
+            <label htmlFor="food-weight">重量 (g){hasSubItems && ' 自動加總'}</label>
+            <input
+              id="food-weight"
+              className="input"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              value={hasSubItems ? totalWeight : draft.weight}
+              disabled={hasSubItems}
+              onChange={(e) => onChange({ ...draft, weight: clampNonNegative(e.target.value) })}
+              placeholder="0"
+            />
+          </div>
+          <div className="field">
             <label htmlFor="food-calories">熱量 (kcal){hasSubItems && ' 自動加總'}</label>
             <input
               id="food-calories"
@@ -849,20 +863,6 @@ export function FoodModal({
               value={hasSubItems ? totalProtein : draft.protein}
               disabled={hasSubItems}
               onChange={(e) => onChange({ ...draft, protein: clampNonNegative(e.target.value) })}
-              placeholder="0"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="food-weight">重量 (g){hasSubItems && ' 自動加總'}</label>
-            <input
-              id="food-weight"
-              className="input"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              value={hasSubItems ? totalWeight : draft.weight}
-              disabled={hasSubItems}
-              onChange={(e) => onChange({ ...draft, weight: clampNonNegative(e.target.value) })}
               placeholder="0"
             />
           </div>
