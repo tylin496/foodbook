@@ -1,5 +1,10 @@
 import type { FoodItem, IngredientOverrides, SubItemOverrides } from './types'
-import { getFoodTotals, getSubItemTotals } from './types'
+import {
+  getEffectiveIngredientQty,
+  getEffectiveSubItemQty,
+  getFoodTotals,
+  getSubItemTotals,
+} from './types'
 
 export function formatSubItemName(sub: { name: string; qty?: number }): string {
   const qty = sub.qty ?? 1
@@ -48,13 +53,22 @@ export function formatItemsAsText(
     lines.push(`   ${formatAmount(totals.weight)}g`)
     lines.push(`   ${formatAmount(totals.calories)}kcal / ${formatAmount(totals.protein)}g`)
     for (const sub of item.subItems ?? []) {
-      const subTotals = getSubItemTotals(sub)
-      const qty = sub.qty ?? 1
-      lines.push(`   - ${formatSubItemName(sub)}：${formatAmount(subTotals.weight)}g`)
+      const subQty = getEffectiveSubItemQty(sub, overrides)
+      // An excluded row is still worth listing (it's part of the record), but
+      // pricing it at qty 0 would print a meaningless "0g / 0kcal" — show one
+      // portion instead and let the ☐ say it isn't counted.
+      const qty = subQty > 0 ? subQty : 1
+      const subTotals = getSubItemTotals(sub, qty, ingredientOverrides)
+      lines.push(
+        `   ${subQty > 0 ? '☑' : '☐'} ${formatSubItemName({ ...sub, qty })}：${formatAmount(subTotals.weight)}g`,
+      )
       lines.push(`     ${formatAmount(subTotals.calories)}kcal / ${formatAmount(subTotals.protein)}g`)
       for (const ing of sub.ingredients ?? []) {
-        const ingQty = (ing.qty ?? 1) * qty
-        lines.push(`     · ${formatSubItemName(ing)}：${formatAmount(ing.weight * ingQty)}g`)
+        const ownQty = getEffectiveIngredientQty(ing, ingredientOverrides)
+        const ingQty = (ownQty > 0 ? ownQty : 1) * qty
+        lines.push(
+          `     ${ownQty > 0 ? '☑' : '☐'} ${formatSubItemName({ ...ing, qty: ownQty > 0 ? ownQty : 1 })}：${formatAmount(ing.weight * ingQty)}g`,
+        )
         lines.push(`       ${formatAmount(ing.calories * ingQty)}kcal / ${formatAmount(ing.protein * ingQty)}g`)
       }
     }
