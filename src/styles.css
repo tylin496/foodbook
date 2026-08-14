@@ -322,8 +322,8 @@ textarea.input { min-height: 90px; resize: vertical; }
      dragged (60) — all of which otherwise paint straight through the
      backdrop and over the dialog. */
   z-index: 100;
-  padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
-    calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding: calc(var(--space-4) + var(--safe-top)) var(--space-4)
+    calc(var(--space-4) + var(--safe-bottom));
   background: var(--scrim-bg);
   backdrop-filter: var(--scrim-blur);
   -webkit-backdrop-filter: var(--scrim-blur);
@@ -426,6 +426,20 @@ textarea.input { min-height: 90px; resize: vertical; }
   :root { --app-height: 100vh; }
 }
 
+/* Safe-area insets go through tokens so the embed can switch them off in one
+   place. Embedded in LiftOS's sheet this page touches no screen edge, but iOS
+   WebKit hands an iframe the TOP-LEVEL page's insets (Chromium reports 0) — so
+   .page-scroll reserved a whole status bar of dead space below the sheet's
+   header, where there is no clock to clear. */
+:root {
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+html.is-embedded {
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+}
+
 html, body, #root { height: var(--app-height); }
 
 /* — page scroller — */
@@ -433,13 +447,13 @@ html, body, #root { height: var(--app-height); }
   height: var(--app-height); overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: calc(28px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  padding: calc(28px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
   background: var(--page-bg);
 }
 .page-scroll::-webkit-scrollbar { display: none; }
 @media (max-width: 430px) {
   .page-scroll {
-    padding: calc(22px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));
+    padding: calc(22px + var(--safe-top)) 14px calc(16px + var(--safe-bottom));
   }
 }
 .page-content { max-width: 1440px; margin: 0 auto; }
@@ -803,7 +817,7 @@ html, body, #root { height: var(--app-height); }
 
 /* — floating selection summary bar — Liquid Glass capsule — */
 .selection-bar {
-  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom));
+  position: fixed; left: 50%; bottom: calc(16px + var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 50;
   width: min(calc(100% - 32px), 520px);
@@ -885,7 +899,7 @@ html, body, #root { height: var(--app-height); }
      both edges) — otherwise this max-height lets the dialog grow taller than
      the room the centered backdrop actually gives it, and the leftover gets
      squeezed out as a visible gap below the dialog. */
-  max-height: calc(var(--app-height) - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(var(--app-height) - var(--space-4) * 2 - var(--safe-top) - var(--safe-bottom));
   overflow-y: auto;
   border-radius: var(--radius-card);
   background: var(--bg-card);
@@ -1149,7 +1163,7 @@ html, body, #root { height: var(--app-height); }
   max-height: 78vh;
   overflow: hidden;
   border-radius: 20px 20px 0 0;
-  padding: 0 0 calc(14px + env(safe-area-inset-bottom));
+  padding: 0 0 calc(14px + var(--safe-bottom));
   gap: 0;
   animation: sheet-in 280ms var(--motion-entrance-bold);
 }
@@ -1227,11 +1241,11 @@ html, body, #root { height: var(--app-height); }
 @media (min-width: 640px) {
   .dialog-backdrop.sub-items-sheet-backdrop {
     align-items: center;
-    padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
-      calc(var(--space-4) + env(safe-area-inset-bottom));
+    padding: calc(var(--space-4) + var(--safe-top)) var(--space-4)
+      calc(var(--space-4) + var(--safe-bottom));
   }
   .dialog.sub-items-sheet {
-    max-height: calc(var(--app-height) - var(--space-4) * 2 - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(var(--app-height) - var(--space-4) * 2 - var(--safe-top) - var(--safe-bottom));
     border-radius: var(--radius-card);
     animation: dialog-in 480ms var(--motion-entrance-bold);
   }

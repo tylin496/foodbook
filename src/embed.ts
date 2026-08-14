@@ -40,6 +40,12 @@ function readEmbedContext(): EmbedContext | null {
 /** Resolved once — neither the URL nor the framing can change without a reload. */
 export const embedContext = readEmbedContext()
 
+// Stamped at module load, before first paint, so the safe-area tokens are
+// already zeroed when .page-scroll first lays out (see styles.css) — iOS WebKit
+// hands an iframe the top-level page's insets, which inside LiftOS's sheet is a
+// status bar of dead space under a header that isn't the status bar.
+if (embedContext) document.documentElement.classList.add('is-embedded')
+
 export interface SelectionTotals {
   count: number
   calories: number
