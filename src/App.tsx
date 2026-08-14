@@ -953,7 +953,7 @@ function FoodBook({
                 className={`sort-pill${sortMode === 'manual' ? ' is-active' : ''}`}
                 onClick={() => handleSortPillClick('manual')}
               >
-                手動
+                預設
               </button>
               <button
                 type="button"
