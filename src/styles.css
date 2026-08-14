@@ -426,17 +426,24 @@ textarea.input { min-height: 90px; resize: vertical; }
   :root { --app-height: 100vh; }
 }
 
-/* Safe-area insets go through tokens so the embed can switch them off in one
-   place. Embedded in LiftOS's sheet this page touches no screen edge, but iOS
-   WebKit hands an iframe the TOP-LEVEL page's insets (Chromium reports 0) — so
-   .page-scroll reserved a whole status bar of dead space below the sheet's
-   header, where there is no clock to clear. */
+/* Safe-area insets go through tokens so the embed can restate them in one
+   place. Embedded in LiftOS's sheet this page touches no screen edge, and iOS
+   WebKit hands an iframe the TOP-LEVEL page's insets anyway (Chromium reports
+   0) — a whole status bar of dead space below a sheet header, where there is
+   no clock to clear.
+
+   What the top inset clears there is the host instead: LiftOS floats the
+   sheet's grabber and its ✕ over this frame, painting nothing, so THIS page's
+   gradient is what fills the sheet's top edge. 34px is that row's height — it
+   only has to keep the header row (sign-in / 新增 / avatar, all top-right,
+   right under the ✕) out from under it. Nothing is reserved at the bottom: the
+   sheet's own footer bar sits below the frame, not over it. */
 :root {
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
 }
 html.is-embedded {
-  --safe-top: 0px;
+  --safe-top: 34px;
   --safe-bottom: 0px;
 }
 
