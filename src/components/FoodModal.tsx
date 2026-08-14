@@ -934,7 +934,21 @@ export function FoodModal({
                         />
                       </label>
                       <div className="sub-item-row-summary">
-                        <div className="sub-item-row-name">{sub.name.trim() || '子項目'}</div>
+                        {/* The name is edited in place here rather than repeated as a
+                            separate field below — one title, always in the same spot. */}
+                        <input
+                          className="sub-item-row-name"
+                          value={sub.name}
+                          onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
+                          placeholder="例如：加鯛魚"
+                          aria-label="子項目名稱"
+                          // Only a freshly added row mounts already-expanded, so this
+                          // focuses new sub-items without every row grabbing focus
+                          // when the modal opens.
+                          autoFocus={expanded}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
                         {!expanded && (
                           <div className="sub-item-row-collapsed-stats">
                             {sub.selected
@@ -959,13 +973,6 @@ export function FoodModal({
                     </div>
                     {expanded && (
                     <div className="sub-item-row-expanded" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      className="input"
-                      value={sub.name}
-                      onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
-                      placeholder="例如：加鯛魚"
-                      autoFocus
-                    />
                     <div className="sub-item-row-numbers">
                       <div className="input-unit-field">
                         <input

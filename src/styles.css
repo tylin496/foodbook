@@ -1030,10 +1030,20 @@ html, body, #root { height: var(--app-height); }
   cursor: pointer;
 }
 .sub-item-row-summary { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* An <input> that reads as the row's title until you focus it — no box, no
+   padding, so the collapsed row looks the same as it did when this was text.
+   16px is the floor that stops iOS Safari zooming the page on focus. */
 .sub-item-row-name {
-  font-family: var(--font-ui); font-weight: 600; font-size: 14px; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%; min-width: 0; padding: 0; margin: 0;
+  font-family: var(--font-ui); font-weight: 600; font-size: 16px; color: var(--ink);
+  text-overflow: ellipsis;
+  background: transparent; border: none; border-radius: 0;
+  caret-color: var(--accent);
+  appearance: none; -webkit-appearance: none;
+  cursor: text;
 }
+.sub-item-row-name::placeholder { color: var(--ink-4); font-weight: 400; }
+.sub-item-row-name:focus { outline: none; box-shadow: inset 0 -1px 0 0 var(--accent); }
 .sub-item-row.is-excluded .sub-item-row-name { color: var(--ink-4); }
 .sub-item-row-collapsed-stats { font-size: 11px; color: var(--ink-4); }
 .sub-item-qty-badge {
