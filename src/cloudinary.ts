@@ -3,7 +3,10 @@ const UPLOAD_PRESET = 'food-diary'
 
 const MAX_DIMENSION = 1600
 const SKIP_COMPRESSION_BELOW_BYTES = 1_500_000
-const JPEG_QUALITY = 0.82
+// WebP rather than JPEG: cut-out product shots are uploaded as transparent
+// PNGs, and JPEG has no alpha channel, so every transparent pixel would be
+// flattened to a solid background.
+const WEBP_QUALITY = 0.85
 const UPLOAD_TIMEOUT_MS = 20_000
 const MAX_ATTEMPTS = 3
 
@@ -24,16 +27,14 @@ async function compressImage(file: File): Promise<File> {
     canvas.height = height
     const ctx = canvas.getContext('2d')
     if (!ctx) return file
-    // JPEG has no alpha, so transparent pixels would encode as black. Lay down
-    // white first to match the card background a PNG cut-out is shown against.
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, width, height)
     ctx.drawImage(bitmap, 0, 0, width, height)
     bitmap.close()
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY))
-    if (!blob || blob.size >= file.size) return file
-    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', WEBP_QUALITY))
+    // A browser without WebP encoding silently hands back a PNG (or JPEG, which
+    // would kill the alpha) — upload the untouched original instead.
+    if (!blob || blob.type !== 'image/webp' || blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.\w+$/, '.webp'), { type: 'image/webp' })
   } catch {
     // Compression is a best-effort optimization — fall back to the original.
     return file
