@@ -5,7 +5,7 @@ import { useTheme } from './useTheme'
 import { useCloudItems } from './useCloudItems'
 import { useGuestOverrides } from './useGuestOverrides'
 import type { FoodDraft } from './types'
-import { BASE_QTY_KEY, emptyDraft, getEffectiveSubItemQty, getFoodTotals } from './types'
+import { BASE_QTY_KEY, emptyDraft, getEffectiveBaseQty, getEffectiveSubItemQty, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
@@ -481,6 +481,17 @@ function FoodBook({
       ),
     [selectedItems, isOwner, guestOverrides, guestIngredientOverrides],
   )
+
+  // The selection bar's ×N drives the item's own qty (see FoodItem.qty), which
+  // scales the item's base numbers but not its sub-items' — so it's only
+  // offered for a lone selected card without sub-items, where those base
+  // numbers are the whole card. Cards with sub-items keep the sub-items
+  // sheet's per-part steppers, which is where their numbers actually live.
+  const steppableItem =
+    selectedItems.length === 1 && (selectedItems[0].subItems?.length ?? 0) === 0 ? selectedItems[0] : null
+  const selectedQty = steppableItem
+    ? getEffectiveBaseQty(steppableItem, isOwner ? undefined : guestOverrides[steppableItem.id])
+    : null
 
   // Embedded in LiftOS: mirror the running selection out to the host on every
   // change, the same way the Subway calculator mirrors its build to us. LiftOS
@@ -1025,6 +1036,8 @@ function FoodBook({
         count={selectedItems.length}
         totalProtein={totals.protein}
         totalCalories={totals.calories}
+        qty={selectedQty}
+        onSetQty={(qty) => steppableItem && handleSetBaseQty(steppableItem.id, qty)}
         onClear={clearSelection}
         onCopy={copySelectedAsText}
       />

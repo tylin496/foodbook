@@ -1,5 +1,6 @@
 import type { FoodItem, FoodSubItem, IngredientOverrides, SubItemOverrides } from './types'
 import {
+  getEffectiveBaseQty,
   getEffectiveIngredientQty,
   getEffectiveSubItemQty,
   getFoodTotals,
@@ -80,7 +81,10 @@ export function formatItemsAsText(
       lone && loneQty > 0 && sameTotals(getSubItemTotals(lone, loneQty, ingredientOverrides), totals) ? lone : null
 
     const foldedName = folded && folded.name !== item.name ? formatSubItemName({ ...folded, qty: loneQty }) : null
-    lines.push(foldedName ? `${item.name}（${foldedName}）` : item.name)
+    // The totals below already carry the item's own portions; without this the
+    // doubled numbers would arrive unexplained.
+    const itemName = formatSubItemName({ ...item, qty: getEffectiveBaseQty(item, overrides) })
+    lines.push(foldedName ? `${itemName}（${foldedName}）` : itemName)
     lines.push(`   ${formatAmount(totals.weight)}g`)
     lines.push(`   ${formatAmount(totals.calories)}kcal / ${formatAmount(totals.protein)}g`)
 
