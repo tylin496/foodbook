@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Calculator, Camera, Check, Pencil } from 'lucide-react'
-import type { FoodItem, IngredientOverrides, SubItemOverrides } from '../types'
+import type { FoodItem, FoodSubItem, IngredientOverrides, SubItemOverrides } from '../types'
 import { getEffectiveBaseQty, getEffectiveSubItemQty, getFoodTotals, isSubItemSelected } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { useCountUp } from '../useCountUp'
@@ -61,6 +61,15 @@ export function FoodCard({
   // Without sub-items the weight itself labels the portion, so it becomes the
   // lone chip instead of being repeated in the meta row.
   const weightAsSubItem = subItems.length === 0 && item.weight > 0
+
+  // A guest's qty change lives in an override, not on the record, so the chip
+  // has to read the effective qty or it keeps showing the shared ×N. An
+  // excluded sub-item still shows one portion (the strikethrough says it isn't
+  // counted), mirroring how the sheet prices its rows.
+  const chipLabel = (sub: FoodSubItem) => {
+    const qty = getEffectiveSubItemQty(sub, guestOverrides)
+    return formatSubItemName({ ...sub, qty: qty > 0 ? qty : (sub.qty ?? 1) })
+  }
 
   const longPressTimer = useRef<number | null>(null)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
@@ -154,7 +163,7 @@ export function FoodCard({
     ro.observe(container)
     return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subItems.map((s) => `${s.name}:${s.qty ?? 1}`).join('|')])
+  }, [subItems.map(chipLabel).join('|')])
 
   const stopMomentum = () => {
     if (momentumFrame.current !== null) {
@@ -345,7 +354,7 @@ export function FoodCard({
                 className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'} is-toggleable`}
                 onClick={handleChipClick}
               >
-                {formatSubItemName(sub)}
+                {chipLabel(sub)}
               </span>
             ))}
             {subItems.length > visibleChipCount && (
@@ -375,7 +384,7 @@ export function FoodCard({
                   className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'}`}
                   style={{ flex: 'none' }}
                 >
-                  {formatSubItemName(sub)}
+                  {chipLabel(sub)}
                 </span>
               ))}
               <span data-more className="sub-item-chip is-more" style={{ flex: 'none' }}>
