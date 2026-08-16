@@ -310,12 +310,17 @@ export function SubItemsSheet({
                   >
                     {selected && <Check size={12} strokeWidth={3} />}
                   </button>
-                  <span className="sub-items-sheet-row-name">{formatSubItemName(sub)}</span>
+                  <span className="sub-items-sheet-row-name">
+                    {formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) })}
+                  </span>
                   <div className="sub-item-qty-stepper">
                     <button
                       type="button"
                       aria-label="減少數量"
-                      disabled={activeQty <= 0 || isLastSelected}
+                      // The last selected row can't go to 0 (that would zero out
+                      // the whole card), but stepping it 2 → 1 is fine — only
+                      // block the press that would actually land on 0.
+                      disabled={activeQty <= 0 || (isLastSelected && activeQty <= 1)}
                       onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
                     >
                       <Minus size={13} />
