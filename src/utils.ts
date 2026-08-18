@@ -75,9 +75,8 @@ export function formatItemsAsText(
     // A single counted sub-item that carries the item's whole numbers just
     // restates the two header lines verbatim — fold its name into the item's
     // and let its ingredients (if any) hang straight off the item instead.
-    // Every printed child line is priced at the item's own portions too, the
-    // same way getFoodTotals scales them — otherwise the parts wouldn't add up
-    // to the header lines above them.
+    // Child lines are priced at one portion of the item, matching the sheet;
+    // only the header lines below carry the item's own 份數, which its ×N names.
     const baseQty = getEffectiveBaseQty(item, overrides)
     const lone = subItems.length === 1 ? subItems[0] : null
     const loneQty = lone ? getEffectiveSubItemQty(lone, overrides) : 0
@@ -95,7 +94,7 @@ export function formatItemsAsText(
     lines.push(`   ${formatAmount(totals.calories)}kcal / ${formatAmount(totals.protein)}g`)
 
     if (folded) {
-      pushIngredients(folded, loneQty * baseQty, '   ')
+      pushIngredients(folded, loneQty, '   ')
       return
     }
 
@@ -105,12 +104,12 @@ export function formatItemsAsText(
       // pricing it at qty 0 would print a meaningless "0g / 0kcal" — show one
       // portion instead and let the ☐ say it isn't counted.
       const qty = subQty > 0 ? subQty : 1
-      const subTotals = getSubItemTotals(sub, qty * baseQty, ingredientOverrides)
+      const subTotals = getSubItemTotals(sub, qty, ingredientOverrides)
       lines.push(
         `   ${subQty > 0 ? '☑' : '☐'} ${formatSubItemName({ ...sub, qty })}：${formatAmount(subTotals.weight)}g`,
       )
       lines.push(`     ${formatAmount(subTotals.calories)}kcal / ${formatAmount(subTotals.protein)}g`)
-      pushIngredients(sub, qty * baseQty, '     ')
+      pushIngredients(sub, qty, '     ')
     }
   })
 

@@ -302,10 +302,10 @@ export function SubItemsSheet({
             // Show the stats a sub-item would contribute if selected, not
             // zeroed out just because it's currently excluded — activeQty is
             // 0 when unselected, which would otherwise blank the display.
-            // Rows are priced at the card's own portions too (getFoodTotals does
-            // the same), so stepping 份數 moves the rows, not just the footer.
-            const rowQty = (selected ? activeQty : (sub.qty ?? 1)) * baseQty
-            const subTotals = getSubItemTotals(sub, rowQty, guestIngredientOverrides)
+            // Every row is priced at one portion of the card, so its numbers
+            // match the stepper beside them; the item's 份數 multiplies the
+            // footer alone, where a ×N says so.
+            const subTotals = getSubItemTotals(sub, selected ? activeQty : (sub.qty ?? 1), guestIngredientOverrides)
             const ingredients = getSortedIngredients(sub)
 
             return (
@@ -420,7 +420,7 @@ export function SubItemsSheet({
                           </div>
                           <div className="sub-item-detail-ingredient-stats">
                             {(() => {
-                              const displayQty = (ingSelected ? ingQty : (ing.qty ?? 1)) * rowQty
+                              const displayQty = ingSelected ? ingQty : (ing.qty ?? 1)
                               return (
                                 <>
                                   {formatAmount(ing.weight * displayQty)}g {formatAmount(ing.calories * displayQty)}kcal{' '}
@@ -445,6 +445,7 @@ export function SubItemsSheet({
 
         <div className="sub-items-sheet-footer">
           <div className="sub-items-sheet-footer-stats">
+            {baseQty > 1 && <div className="sub-items-sheet-footer-mult">×{formatAmount(baseQty)}</div>}
             <div>
               <div className="sub-items-sheet-footer-value is-calories">{formatAmount(displayCalories)}</div>
               <div className="sub-items-sheet-footer-label">KCAL</div>
