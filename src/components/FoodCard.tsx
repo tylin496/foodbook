@@ -55,6 +55,9 @@ export function FoodCard({
   guestIngredientOverrides,
 }: FoodCardProps) {
   const totals = getFoodTotals(item, guestOverrides, guestIngredientOverrides)
+  // The stats below are already scaled by the item's own portions, so the name
+  // carries the ×N that explains them (same shape as a sub-item's label).
+  const baseQty = getEffectiveBaseQty(item, guestOverrides)
   const displayCalories = useCountUp(totals.calories)
   const displayProtein = useCountUp(totals.protein)
   const subItems = item.subItems ?? []
@@ -326,7 +329,7 @@ export function FoodCard({
       </div>
       <div className="card-body">
         <div className="food-name-line">
-          <div className="food-name">{item.name}</div>
+          <div className="food-name">{formatSubItemName({ ...item, qty: baseQty })}</div>
           {isCalculatorLink && (
             <span
               className="calculator-badge"
@@ -410,7 +413,7 @@ export function FoodCard({
           title={item.name}
           subItems={subItems}
           totals={totals}
-          baseQty={getEffectiveBaseQty(item, guestOverrides)}
+          baseQty={baseQty}
           guestOverrides={guestOverrides}
           guestIngredientOverrides={guestIngredientOverrides}
           closing={sheetClosing}

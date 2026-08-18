@@ -167,6 +167,9 @@ export function getSubItemTotals(
   }
 }
 
+// The item's own portions scale the whole card — its base numbers *and* every
+// counted sub-item. Scaling only the base numbers made the ×N a no-op for the
+// common card whose values all live in sub-items (base 0).
 export function getFoodTotals(
   item: FoodItem,
   overrides?: SubItemOverrides,
@@ -174,7 +177,7 @@ export function getFoodTotals(
 ): { weight: number; protein: number; calories: number } {
   const subItems = item.subItems ?? []
   const baseQty = getEffectiveBaseQty(item, overrides)
-  return subItems.reduce(
+  const onePortion = subItems.reduce(
     (acc, sub) => {
       const qty = getEffectiveSubItemQty(sub, overrides)
       if (qty <= 0) return acc
@@ -185,6 +188,11 @@ export function getFoodTotals(
         calories: acc.calories + subTotals.calories,
       }
     },
-    { weight: item.weight * baseQty, protein: item.protein * baseQty, calories: item.calories * baseQty },
+    { weight: item.weight, protein: item.protein, calories: item.calories },
   )
+  return {
+    weight: onePortion.weight * baseQty,
+    protein: onePortion.protein * baseQty,
+    calories: onePortion.calories * baseQty,
+  }
 }

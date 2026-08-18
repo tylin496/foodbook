@@ -483,12 +483,10 @@ function FoodBook({
   )
 
   // The selection bar's ×N drives the item's own qty (see FoodItem.qty), which
-  // scales the item's base numbers but not its sub-items' — so it's only
-  // offered for a lone selected card without sub-items, where those base
-  // numbers are the whole card. Cards with sub-items keep the sub-items
-  // sheet's per-part steppers, which is where their numbers actually live.
-  const steppableItem =
-    selectedItems.length === 1 && (selectedItems[0].subItems?.length ?? 0) === 0 ? selectedItems[0] : null
+  // scales the whole card — base numbers and sub-items alike (getFoodTotals) —
+  // so it's offered for any single selected card. It's the same number the
+  // sub-items sheet's header stepper edits.
+  const steppableItem = selectedItems.length === 1 ? selectedItems[0] : null
   const selectedQty = steppableItem
     ? getEffectiveBaseQty(steppableItem, isOwner ? undefined : guestOverrides[steppableItem.id])
     : null

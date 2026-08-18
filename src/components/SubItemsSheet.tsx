@@ -56,6 +56,10 @@ export function SubItemsSheet({
 
   const rows = subItems.map((sub) => ({ sub, activeQty: getEffectiveSubItemQty(sub, guestOverrides) }))
   const selectedCount = rows.filter(({ activeQty }) => activeQty > 0).length
+  // With a single sub-item its stepper and the header's 份數 stepper would be
+  // two controls for the same number (both scale the card's only part), so the
+  // row drops its own and the header one speaks for the whole card.
+  const soloRow = subItems.length === 1
   const sortedRows = [...rows].sort((a, b) => Number(b.activeQty > 0) - Number(a.activeQty > 0))
 
   // Selected ingredients float to the top, same as sortedRows above; a manual
@@ -295,7 +299,10 @@ export function SubItemsSheet({
             // Show the stats a sub-item would contribute if selected, not
             // zeroed out just because it's currently excluded — activeQty is
             // 0 when unselected, which would otherwise blank the display.
-            const subTotals = getSubItemTotals(sub, selected ? activeQty : (sub.qty ?? 1), guestIngredientOverrides)
+            // Rows are priced at the card's own portions too (getFoodTotals does
+            // the same), so stepping 份數 moves the rows, not just the footer.
+            const rowQty = (selected ? activeQty : (sub.qty ?? 1)) * baseQty
+            const subTotals = getSubItemTotals(sub, rowQty, guestIngredientOverrides)
             const ingredients = getSortedIngredients(sub)
 
             return (
@@ -313,27 +320,29 @@ export function SubItemsSheet({
                   <span className="sub-items-sheet-row-name">
                     {formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) })}
                   </span>
-                  <div className="sub-item-qty-stepper">
-                    <button
-                      type="button"
-                      aria-label="減少數量"
-                      // The last selected row can't go to 0 (that would zero out
-                      // the whole card), but stepping it 2 → 1 is fine — only
-                      // block the press that would actually land on 0.
-                      disabled={activeQty <= 0 || (isLastSelected && activeQty <= 1)}
-                      onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
-                    <button
-                      type="button"
-                      aria-label="增加數量"
-                      onClick={() => onSetQty(sub.id, activeQty + 1)}
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </div>
+                  {!soloRow && (
+                    <div className="sub-item-qty-stepper">
+                      <button
+                        type="button"
+                        aria-label="減少數量"
+                        // The last selected row can't go to 0 (that would zero out
+                        // the whole card), but stepping it 2 → 1 is fine — only
+                        // block the press that would actually land on 0.
+                        disabled={activeQty <= 0 || (isLastSelected && activeQty <= 1)}
+                        onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
+                      >
+                        <Minus size={13} />
+                      </button>
+                      <span className="sub-item-qty-stepper-value">{formatAmount(activeQty)}</span>
+                      <button
+                        type="button"
+                        aria-label="增加數量"
+                        onClick={() => onSetQty(sub.id, activeQty + 1)}
+                      >
+                        <Plus size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {ingredients.length > 0 && (
@@ -408,7 +417,7 @@ export function SubItemsSheet({
                           </div>
                           <div className="sub-item-detail-ingredient-stats">
                             {(() => {
-                              const displayQty = ingSelected ? ingQty : (ing.qty ?? 1)
+                              const displayQty = (ingSelected ? ingQty : (ing.qty ?? 1)) * rowQty
                               return (
                                 <>
                                   {formatAmount(ing.weight * displayQty)}g {formatAmount(ing.calories * displayQty)}kcal{' '}
