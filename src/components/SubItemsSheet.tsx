@@ -267,19 +267,22 @@ export function SubItemsSheet({
             <div className="sub-items-sheet-header-sub">已選 {selectedCount} 項</div>
           </div>
           <div className="sub-items-sheet-header-actions">
-            <div className="sub-item-qty-stepper">
-              <button
-                type="button"
-                aria-label="減少份數"
-                disabled={baseQty <= 1}
-                onClick={() => onSetBaseQty(Math.max(1, baseQty - 1))}
-              >
-                <Minus size={13} />
-              </button>
-              <span className="sub-item-qty-stepper-value">{formatAmount(baseQty)}</span>
-              <button type="button" aria-label="增加份數" onClick={() => onSetBaseQty(baseQty + 1)}>
-                <Plus size={13} />
-              </button>
+            <div className="sub-items-sheet-qty">
+              <span className="sub-items-sheet-qty-label">份數</span>
+              <div className="sub-item-qty-stepper">
+                <button
+                  type="button"
+                  aria-label="減少份數"
+                  disabled={baseQty <= 1}
+                  onClick={() => onSetBaseQty(Math.max(1, baseQty - 1))}
+                >
+                  <Minus size={13} />
+                </button>
+                <span className="sub-item-qty-stepper-value">{formatAmount(baseQty)}</span>
+                <button type="button" aria-label="增加份數" onClick={() => onSetBaseQty(baseQty + 1)}>
+                  <Plus size={13} />
+                </button>
+              </div>
             </div>
             <button type="button" className="dialog-close" aria-label="關閉" onClick={onClose}>
               <X size={20} />
@@ -318,7 +321,9 @@ export function SubItemsSheet({
                     {selected && <Check size={12} strokeWidth={3} />}
                   </button>
                   <span className="sub-items-sheet-row-name">
-                    {formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) })}
+                    {/* The stepper beside the name already prints the qty, so
+                        only a row without one carries it as a ×N suffix. */}
+                    {soloRow ? formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) }) : sub.name}
                   </span>
                   {!soloRow && (
                     <div className="sub-item-qty-stepper">
@@ -384,16 +389,25 @@ export function SubItemsSheet({
                             >
                               {ingSelected && <Check size={9} strokeWidth={3} />}
                             </button>
-                            <span className="sub-item-detail-ingredient-name">{formatSubItemName(ing)}</span>
-                            {ingQty > 1 ? (
+                            <span className="sub-item-detail-ingredient-name">
+                              {ingSelected ? ing.name : formatSubItemName(ing)}
+                            </span>
+                            {/* Same − N + shape at every qty: the buttons used to
+                                morph into a lone + at 1 and never showed the
+                                number at all, so the only clue was a ×N in the
+                                name. Excluded rows keep that suffix — their
+                                stepper is gone and the checkbox brings it back. */}
+                            {ingSelected && (
                               <div className="ingredient-qty-stepper">
                                 <button
                                   type="button"
                                   aria-label="減少數量"
+                                  disabled={ingQty <= 1}
                                   onClick={() => onSetIngredientQty(sub.id, ing.id, Math.max(1, ingQty - 1))}
                                 >
                                   <Minus size={11} />
                                 </button>
+                                <span className="ingredient-qty-stepper-value">{formatAmount(ingQty)}</span>
                                 <button
                                   type="button"
                                   aria-label="增加數量"
@@ -402,17 +416,6 @@ export function SubItemsSheet({
                                   <Plus size={11} />
                                 </button>
                               </div>
-                            ) : (
-                              ingSelected && (
-                                <button
-                                  type="button"
-                                  className="ingredient-qty-add"
-                                  aria-label="加一份"
-                                  onClick={() => onSetIngredientQty(sub.id, ing.id, ingQty + 1)}
-                                >
-                                  <Plus size={11} />
-                                </button>
-                              )
                             )}
                           </div>
                           <div className="sub-item-detail-ingredient-stats">
