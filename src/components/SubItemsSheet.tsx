@@ -299,6 +299,10 @@ export function SubItemsSheet({
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
             const isLastSelected = selected && selectedCount <= 1
+            // An excluded row has nothing to step (the checkbox brings it back
+            // at one portion), and a lone row is stepped by the header's 份數 —
+            // both then carry their qty as a ×N on the name instead.
+            const showStepper = selected && !soloRow
             // Show the stats a sub-item would contribute if selected, not
             // zeroed out just because it's currently excluded — activeQty is
             // 0 when unselected, which would otherwise blank the display.
@@ -323,18 +327,18 @@ export function SubItemsSheet({
                   <span className="sub-items-sheet-row-name">
                     {/* The stepper beside the name already prints the qty, so
                         only a row without one carries it as a ×N suffix. */}
-                    {soloRow ? formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) }) : sub.name}
+                    {showStepper ? sub.name : formatSubItemName({ ...sub, qty: selected ? activeQty : (sub.qty ?? 1) })}
                   </span>
-                  {!soloRow && (
+                  {showStepper && (
                     <div className="sub-item-qty-stepper">
                       <button
                         type="button"
                         aria-label="減少數量"
-                        // The last selected row can't go to 0 (that would zero out
-                        // the whole card), but stepping it 2 → 1 is fine — only
-                        // block the press that would actually land on 0.
-                        disabled={activeQty <= 0 || (isLastSelected && activeQty <= 1)}
-                        onClick={() => onSetQty(sub.id, Math.max(0, activeQty - 1))}
+                        // Floors at 1, same as the ingredient steppers below and
+                        // the 份數 one above: excluding a row is the checkbox's
+                        // job, not the bottom of a stepper's range.
+                        disabled={activeQty <= 1}
+                        onClick={() => onSetQty(sub.id, Math.max(1, activeQty - 1))}
                       >
                         <Minus size={13} />
                       </button>
