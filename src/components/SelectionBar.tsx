@@ -71,25 +71,28 @@ export function SelectionBar({
           <div className="value">{Math.round(displayProtein)}</div>
           <div className="label">蛋白質 g</div>
         </div>
-      </div>
-      {shownQty !== null && (
-        <div className="qty-stepper">
-          <div className="qty-stepper-value">×{shownQty}</div>
-          <div className="qty-arrows">
-            <button type="button" aria-label="增加份數" onClick={() => onSetQty(shownQty + 1)}>
-              <ChevronUp size={14} />
-            </button>
-            <button
-              type="button"
-              aria-label="減少份數"
-              disabled={shownQty <= 1}
-              onClick={() => onSetQty(Math.max(1, shownQty - 1))}
-            >
-              <ChevronDown size={14} />
-            </button>
+        {shownQty !== null && (
+          <div className="qty-stepper">
+            <div className="stat">
+              <div className="value">×{shownQty}</div>
+              <div className="label">份數</div>
+            </div>
+            <div className="qty-arrows">
+              <button type="button" aria-label="增加份數" onClick={() => onSetQty(shownQty + 1)}>
+                <ChevronUp size={14} />
+              </button>
+              <button
+                type="button"
+                aria-label="減少份數"
+                disabled={shownQty <= 1}
+                onClick={() => onSetQty(Math.max(1, shownQty - 1))}
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       <div className="icon-actions">
         <button
           type="button"
