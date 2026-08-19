@@ -900,8 +900,10 @@ html, body, #root { height: var(--app-height); }
   background: transparent; color: var(--ink-2); cursor: pointer;
   transition: background var(--dur-press) var(--ease-press), color var(--dur-press) var(--ease-press);
 }
-/* 30×26 visible, ≥38px tappable — same trick as .card-actions button. */
-.selection-bar-stepper button::before { content: ''; position: absolute; inset: -4px; }
+/* 30×26 visible, 38×38 tappable — same trick as .card-actions button. The
+   vertical overhang leaves the 32px capsule; there is nothing above or below
+   it inside the bar to mis-tap. */
+.selection-bar-stepper button::before { content: ''; position: absolute; inset: -6px -4px; }
 .selection-bar-stepper button:hover { background: var(--glass-btn); color: var(--ink); }
 .selection-bar-stepper button:disabled { color: var(--ink-4); cursor: default; }
 .selection-bar-stepper button:disabled:hover { background: none; }
