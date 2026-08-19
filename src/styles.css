@@ -816,14 +816,22 @@ html, body, #root { height: var(--app-height); }
 }
 .sub-items-sheet-row-stats { font-size: 11px; color: var(--ink-4); }
 
-/* — floating selection summary bar — Liquid Glass capsule — */
+/* — floating selection summary bar — Liquid Glass capsule —
+   Three type sizes only (26 / 13 / 11), one 16px icon size, one 32px control
+   height. The old bar mixed eight font sizes, three icon sizes and three
+   control heights inside 52px — each pair too close to read as a hierarchy and
+   too far apart to look aligned, which is what "數字大小不齊" was pointing at. */
 .selection-bar {
+  /* The .14 hairline the design draws between name/data and data/actions —
+     white in dark mode, so it rides a token there instead of being hardcoded. */
+  --bar-rule: rgba(60, 60, 67, .14);
   position: fixed; left: 50%; bottom: calc(16px + var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 50;
   width: min(calc(100% - 32px), 520px);
-  display: flex; align-items: center; flex-wrap: wrap; justify-content: center;
-  gap: 16px; padding: 9px 10px 9px 14px;
+  height: 48px;
+  display: flex; align-items: center;
+  gap: 12px; padding: 0 6px 0 16px;
   border-radius: var(--radius-pill);
   background: var(--glass-bg);
   backdrop-filter: saturate(200%) blur(22px);
@@ -836,11 +844,7 @@ html, body, #root { height: var(--app-height); }
     0 0 0 .5px var(--glass-edge);
   animation: glass-in var(--dur-enter) var(--ease-enter);
 }
-@media (max-width: 430px) {
-  /* Tighter gaps so the ×N stepper still fits on one line next to the count,
-     both stats and the two actions — the bar wraps rather than scrolls. */
-  .selection-bar { max-width: 340px; gap: 10px; padding-left: 12px; }
-}
+:root[data-theme='dark'] .selection-bar { --bar-rule: var(--rule-strong); }
 .selection-bar.is-leaving {
   animation: glass-out var(--dur-exit) ease forwards;
 }
@@ -852,68 +856,120 @@ html, body, #root { height: var(--app-height); }
   from { opacity: 1; transform: translateX(-50%) translateY(0); }
   to { opacity: 0; transform: translateX(-50%) translateY(6px); }
 }
-.selection-bar .selected-count {
-  flex: none;
-  padding: 3px 8px; border-radius: var(--radius-pill);
-  background: var(--accent-strong); color: #fff;
-  font-family: var(--font-ui); font-size: 11px; font-weight: 700; line-height: 1.3;
+/* Names what the stepper acts on. It takes all the slack so the four blocks to
+   its right keep fixed widths and never shuffle. */
+.selection-bar-name {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; gap: 6px; overflow: hidden;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  letter-spacing: -.01em; color: var(--ink);
   white-space: nowrap;
 }
-@media (max-width: 430px) {
-  /* The count is the least numeric thing in the capsule — it gives up width
-     first so ×N and both stats keep theirs on one line. */
-  .selection-bar .selected-count { padding: 3px 7px; font-size: 10px; }
+.selection-bar-item { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.selection-bar-more { flex: none; font-size: 11px; font-weight: 500; color: var(--ink-4); }
+/* Marks the one real break in the row — name column ↔ data. Without it the
+   slack on the left reads as a hole rather than a column. */
+.selection-bar-rule { flex: none; width: 1px; height: 20px; background: var(--bar-rule); }
+/* No rule between the two numbers: their units already separate them, and a
+   line drawn inside one group would leave the bigger break unmarked. */
+.selection-bar-totals { flex: none; display: flex; align-items: baseline; gap: 14px; }
+.selection-bar-total { display: flex; align-items: baseline; gap: 4px; }
+/* Fixed, right-aligned, tabular columns: 58px holds four digits of kcal and
+   46px three of protein, both measured at this size. Sizing them to content is
+   what made the whole right half jump every time a total ticked over. */
+.selection-bar-total .value {
+  display: inline-block; min-width: 58px; text-align: right;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -.04em;
+  color: var(--ink);
 }
-.selection-bar .stats { display: flex; align-items: flex-end; gap: 16px; }
-@media (max-width: 430px) {
-  .selection-bar .stats { gap: 10px; }
+.selection-bar-total + .selection-bar-total .value { min-width: 46px; }
+.selection-bar-total .unit { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.selection-bar-stepper {
+  flex: none; display: flex; align-items: center; gap: 2px;
+  height: 32px; padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  box-shadow: inset 0 0 0 .5px var(--rule);
 }
-.selection-bar .stat { text-align: center; }
-.selection-bar .stat .value {
-  font-family: var(--font-mono); font-size: 20px; font-weight: 700;
-  line-height: 1.15; letter-spacing: -.02em; color: var(--ink);
-}
-@media (max-width: 430px) {
-  .selection-bar .stat .value { font-size: 18px; }
-}
-.selection-bar .stat .label {
-  font-family: var(--font-ui); font-size: 11px; font-weight: 500;
-  letter-spacing: .04em; color: var(--ink-3); margin-top: 1px;
-}
-.selection-bar .stat-rule { width: 1px; height: 22px; background: var(--rule); }
-/* ×N for the selected card's own portions. It rides in .stats as a third
-   labelled column so its number sits on the same line as kcal and 蛋白質 g —
-   floating it beside the stats left it hanging half a label lower. The arrows
-   stack instead of flanking the value the way the sheet's −/+ stepper does:
-   the bar runs tight enough at 430px that a third horizontal control would
-   wrap it. */
-.selection-bar .qty-stepper { display: flex; align-items: flex-end; gap: 3px; flex: none; }
-.selection-bar .qty-arrows { display: flex; flex-direction: column; }
-.selection-bar .qty-arrows button {
-  /* 2×19px matches the height of a value+label column beside it, so the pair
-     bottoms out level with the labels instead of overshooting the capsule. */
-  width: 22px; height: 19px; padding: 0;
+.selection-bar-stepper button {
+  position: relative;
+  width: 30px; height: 26px; padding: 0;
   display: flex; align-items: center; justify-content: center;
-  border: none; border-radius: 6px;
-  background: transparent; color: var(--ink-3); cursor: pointer;
-  transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
+  border: none; border-radius: var(--radius-pill);
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  transition: background var(--dur-press) var(--ease-press), color var(--dur-press) var(--ease-press);
 }
-.selection-bar .qty-arrows button:hover { color: var(--ink); background: var(--bg-soft); }
-.selection-bar .qty-arrows button:disabled { color: var(--ink-4); cursor: default; }
-.selection-bar .qty-arrows button:disabled:hover { background: none; }
-.selection-bar .qty-arrows button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* 8px, not 2px: "清除選取" sits right next to "複製" — wipes the whole
-   selection in one tap, so it needs enough gap that a fat-finger reach for
-   copy doesn't land on it instead. */
-.selection-bar .icon-actions { display: flex; align-items: center; gap: 8px; flex: none; }
-.selection-bar .icon-btn {
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+/* 30×26 visible, ≥38px tappable — same trick as .card-actions button. */
+.selection-bar-stepper button::before { content: ''; position: absolute; inset: -4px; }
+.selection-bar-stepper button:hover { background: var(--glass-btn); color: var(--ink); }
+.selection-bar-stepper button:disabled { color: var(--ink-4); cursor: default; }
+.selection-bar-stepper button:disabled:hover { background: none; }
+.selection-bar-stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.selection-bar-qty {
+  min-width: 28px; text-align: center;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 600; letter-spacing: -.01em; color: var(--ink-2);
+}
+.selection-bar-actions {
+  flex: none; display: flex; align-items: center; gap: 2px;
+  padding-left: 12px; box-shadow: inset 1px 0 0 var(--bar-rule);
+}
+.selection-bar-btn {
+  position: relative;
+  width: 32px; height: 32px; flex: none;
+  display: flex; align-items: center; justify-content: center;
   border: none; border-radius: var(--radius-pill);
   background: transparent; color: var(--ink-3); cursor: pointer;
-  transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
+  transition: background var(--dur-press) var(--ease-press), color var(--dur-press) var(--ease-press);
 }
-.selection-bar .icon-btn:hover { color: var(--ink); background: var(--bg-soft); }
-.selection-bar .icon-btn.is-copied { animation: pop 300ms var(--ease-pop); }
+.selection-bar-btn::before { content: ''; position: absolute; inset: -3px; }
+.selection-bar-btn:hover { background: var(--glass-btn); color: var(--ink); }
+.selection-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.selection-bar-copy.is-copied { color: var(--good); animation: pop 300ms var(--ease-pop); }
+.selection-bar-divider { display: none; }
+@media (max-width: 480px) {
+  /* The four fixed blocks — rule 1 + totals ~192 + stepper 98 + icons 78 — plus
+     22px padding and 4×12px gaps need ~440px of bar. The bar is 32px narrower
+     than the viewport, so one row stops fitting below ~475px of viewport, not
+     below 430: a 390pt phone leaves it 358px and a 440pt one (16 Pro Max) 408px
+     — both short. Switch shape here rather than shrink: compressing type and
+     controls would still overflow, only less legibly.
+     Row 1 is what's selected (name + its portions + 清除), row 2 the result
+     (totals + 複製). Same type scale, icon size, stepper and number columns as
+     the wide bar — only the arrangement differs. */
+  .selection-bar {
+    width: calc(100% - 32px);
+    height: auto;
+    flex-wrap: wrap;
+    column-gap: 12px; row-gap: 0;
+    padding: 0;
+    border-radius: 20px;
+    /* Deeper drop shadow, one step: the panel carries more mass than the pill. */
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      inset 0 0 0 .5px var(--glass-edge),
+      inset 0 -1px 2px var(--glass-shadow),
+      0 10px 30px -8px var(--glass-shadow),
+      0 0 0 .5px var(--glass-edge);
+  }
+  /* Centred, not baseline: a baseline group flushes to the top of a taller row
+     box. The pairs inside .selection-bar-total stay baseline-aligned and are
+     the same height, so the two numbers still share a baseline. */
+  .selection-bar-name { order: 1; align-items: center; height: 42px; padding-left: 14px; }
+  .selection-bar-stepper { order: 2; }
+  .selection-bar-rule { display: none; }
+  .selection-bar-actions { display: contents; }
+  .selection-bar-clear { order: 3; width: 30px; height: 30px; margin-right: 6px; }
+  /* 30px visible needs 4px of overhang, not 3, to keep the 38px tap target. */
+  .selection-bar-clear::before { inset: -4px; }
+  /* Full-width, so it forces the wrap between the two rows. */
+  .selection-bar-divider {
+    order: 4; display: block; width: 100%; height: 1px; background: var(--rule-strong);
+  }
+  .selection-bar-totals { order: 5; flex: 1; align-items: center; height: 52px; padding-left: 14px; }
+  .selection-bar-copy { order: 6; margin-right: 6px; }
+}
 @keyframes pop {
   0% { transform: scale(1); }
   40% { transform: scale(1.2); }

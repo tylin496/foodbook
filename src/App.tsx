@@ -482,11 +482,21 @@ function FoodBook({
     [selectedItems, isOwner, guestOverrides, guestIngredientOverrides],
   )
 
-  // The selection bar's ×N drives the item's own qty (see FoodItem.qty), which
-  // scales the whole card — base numbers and sub-items alike (getFoodTotals) —
-  // so it's offered for any single selected card. It's the same number the
-  // sub-items sheet's header stepper edits.
-  const steppableItem = selectedItems.length === 1 ? selectedItems[0] : null
+  // The selection bar's stepper drives the item's own qty (see FoodItem.qty),
+  // which scales the whole card — base numbers and sub-items alike
+  // (getFoodTotals). It's the same number the sub-items sheet's header stepper
+  // edits. With several cards selected it acts on the last one tapped, which
+  // the bar names: selectedIds keeps insertion order, so that's its last entry
+  // (selectedItems is in display order, not selection order).
+  const lastSelectedId = useMemo(() => {
+    let last: string | null = null
+    for (const id of selectedIds) last = id
+    return last
+  }, [selectedIds])
+  const steppableItem =
+    selectedItems.find((item) => item.id === lastSelectedId) ??
+    selectedItems[selectedItems.length - 1] ??
+    null
   const selectedQty = steppableItem
     ? getEffectiveBaseQty(steppableItem, isOwner ? undefined : guestOverrides[steppableItem.id])
     : null
@@ -1032,6 +1042,7 @@ function FoodBook({
 
       <SelectionBar
         count={selectedItems.length}
+        itemName={steppableItem?.name ?? ''}
         totalProtein={totals.protein}
         totalCalories={totals.calories}
         qty={selectedQty}
