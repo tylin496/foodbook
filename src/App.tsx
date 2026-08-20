@@ -550,7 +550,13 @@ function FoodBook({
   const allSelected =
     filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id))
 
+  // Both copy routes come through here — the bar's button and ⌘C — so the
+  // signal is where the ✓ gets its cue, and the bar no longer has to be the
+  // thing that was clicked to show one. Raised before the copy itself: the
+  // tick answers the action, not the clipboard.
+  const [copySignal, setCopySignal] = useState(0)
   const copySelectedAsText = () => {
+    setCopySignal((n) => n + 1)
     copyText(
       formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides, isOwner ? undefined : guestIngredientOverrides),
     )
@@ -1063,6 +1069,7 @@ function FoodBook({
         onSetQty={(qty) => steppableItem && handleSetBaseQty(steppableItem.id, qty)}
         onClear={clearSelection}
         onCopy={copySelectedAsText}
+        copySignal={copySignal}
       />
 
       {modalOpen && activeId && (

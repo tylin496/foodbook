@@ -14,6 +14,9 @@ interface SelectionBarProps {
   onSetQty: (qty: number) => void
   onClear: () => void
   onCopy: () => void
+  // Bumped by App on every copy, whichever route it came in by. The bar owns
+  // the ✓ but not the trigger — ⌘C never passes through the button.
+  copySignal: number
 }
 
 export function SelectionBar({
@@ -25,6 +28,7 @@ export function SelectionBar({
   onSetQty,
   onClear,
   onCopy,
+  copySignal,
 }: SelectionBarProps) {
   const [copied, setCopied] = useState(false)
   const visible = count > 0
@@ -53,17 +57,17 @@ export function SelectionBar({
     return () => clearTimeout(timer)
   }, [visible, rendered])
 
-  if (!rendered) return null
-
-  const handleCopy = () => {
-    // The tick is feedback for the tap, not for the clipboard call — so it is
-    // set first and unconditionally. Ordered the other way, an origin without
-    // navigator.clipboard (see copyText) threw on the way out of onCopy and
-    // took the whole ✓/pop with it, which read as the animation disappearing.
+  // Driven by the signal rather than the button's own onClick, so ⌘C gets the
+  // same ✓ as a tap. App raises the signal before it touches the clipboard, so
+  // the feedback never depends on that call returning.
+  useEffect(() => {
+    if (copySignal === 0) return
     setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-    onCopy()
-  }
+    const timer = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(timer)
+  }, [copySignal])
+
+  if (!rendered) return null
 
   const shown = visible ? { count, itemName, qty: qty ?? last.qty } : last
   const shownQty = shown.qty
@@ -110,7 +114,7 @@ export function SelectionBar({
         <button
           type="button"
           className={`selection-bar-btn selection-bar-copy${copied ? ' is-copied' : ''}`}
-          onClick={handleCopy}
+          onClick={onCopy}
           aria-label={copied ? '已複製' : '複製成文字'}
         >
           {copied ? <Check size={16} strokeWidth={2.4} /> : <Copy size={16} />}
