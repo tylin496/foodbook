@@ -58,13 +58,19 @@ export function SelectionBar({
       return
     }
     if (!rendered) return
-    // The ✓ belongs to the selection that was copied. Left standing, a new
-    // selection made inside the 1.5s would open the bar already claiming a
-    // copy of itself.
-    setCopied(false)
     const timer = setTimeout(() => setRendered(false), 200)
     return () => clearTimeout(timer)
   }, [visible, rendered])
+
+  // The ✓ belongs to the selection that was copied, and the bar returns null
+  // without ever unmounting — left standing, a new selection made inside the
+  // 1.5s would open the bar already claiming a copy of itself. Reset it on the
+  // way in rather than on the way out, so copying and clearing straight after
+  // still shows the ✓ through the exit fade instead of dropping it the instant
+  // the bar starts leaving.
+  useEffect(() => {
+    if (visible) setCopied(false)
+  }, [visible])
 
   // Driven by the signal rather than the button's own onClick, so ⌘C gets the
   // same ✓ as a tap. App raises the signal before it touches the clipboard, so
