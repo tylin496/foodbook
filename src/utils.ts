@@ -125,7 +125,11 @@ export function formatItemsAsText(
 export function copyText(text: string): boolean {
   try {
     if (navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(text)
+      // Swallowed, not fallen back on: the rejection (Safari refuses when the
+      // document isn't focused) arrives a tick later, by which point the user
+      // gesture execCommand needs is spent. Left unhandled it would log an
+      // unhandled rejection on every such copy.
+      navigator.clipboard.writeText(text).catch(() => {})
       return true
     }
   } catch {
@@ -135,18 +139,23 @@ export function copyText(text: string): boolean {
   try {
     const area = document.createElement('textarea')
     area.value = text
-    // iOS ignores .select() on a plain readonly textarea; it copies a range,
-    // so the node has to be editable and the selection made explicitly.
-    area.contentEditable = 'true'
-    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+    // readonly so focusing it can't raise the iOS keyboard, and 1×1 rather
+    // than off-screen so scroll position stays put.
+    area.setAttribute('readonly', '')
+    area.style.cssText =
+      'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;opacity:0'
     document.body.appendChild(area)
 
+    // iOS ignores .select() here and copies the document's own selection, so
+    // the range has to be set explicitly; .select() after it is what focuses
+    // the field everywhere else, which is what execCommand reads from there.
     const range = document.createRange()
     range.selectNodeContents(area)
     const selection = window.getSelection()
     selection?.removeAllRanges()
     selection?.addRange(range)
     area.setSelectionRange(0, text.length)
+    area.select()
 
     const ok = document.execCommand('copy')
     selection?.removeAllRanges()

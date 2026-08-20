@@ -55,6 +55,10 @@ export function SelectionBar({
       return
     }
     if (!rendered) return
+    // The ✓ belongs to the selection that was copied. Left standing, a new
+    // selection made inside the 1.5s would open the bar already claiming a
+    // copy of itself.
+    setCopied(false)
     const timer = setTimeout(() => setRendered(false), 200)
     return () => clearTimeout(timer)
   }, [visible, rendered])
