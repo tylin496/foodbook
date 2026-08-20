@@ -120,7 +120,7 @@ export function SelectionBar({
           </button>
         </div>
       )}
-      {/* Two rows below 430px: 清除 rides with what's selected on the top row,
+      {/* Two rows below 540px: 清除 rides with what's selected on the top row,
           複製 with the totals it copies on the bottom one. */}
       <div className="selection-bar-divider" />
       <div className="selection-bar-actions">
