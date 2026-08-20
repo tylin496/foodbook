@@ -555,11 +555,20 @@ function FoodBook({
   // thing that was clicked to show one. Raised before the copy itself: the
   // tick answers the action, not the clipboard.
   const [copySignal, setCopySignal] = useState(0)
+  // Whether the last copy actually landed. Starts optimistic and is corrected
+  // a tick later, so a clipboard the browser refused stops reading as a ✓.
+  const [copyFailed, setCopyFailed] = useState(false)
+  const copyRun = useRef(0)
   const copySelectedAsText = () => {
+    const run = ++copyRun.current
     setCopySignal((n) => n + 1)
-    copyText(
+    setCopyFailed(false)
+    void copyText(
       formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides, isOwner ? undefined : guestIngredientOverrides),
-    )
+    ).then((ok) => {
+      // A slow answer must not overwrite a copy that has since replaced it.
+      if (copyRun.current === run) setCopyFailed(!ok)
+    })
   }
 
   useEffect(() => {
@@ -1070,6 +1079,7 @@ function FoodBook({
         onClear={clearSelection}
         onCopy={copySelectedAsText}
         copySignal={copySignal}
+        copyFailed={copyFailed}
       />
 
       {modalOpen && activeId && (

@@ -122,22 +122,27 @@ export function formatItemsAsText(
 // `.writeText` throws before anything after the call can run. Keep the throw
 // in here, and fall back to the old textarea + execCommand path so the copy
 // still lands on those origins.
-export function copyText(text: string): boolean {
+//
+// Resolves to whether the text actually reached the clipboard. The write is
+// only knowable a tick late, which is why the caller shows its tick straight
+// away and corrects it from this — waiting on the answer would put the delay
+// back into the one piece of feedback that has to be immediate.
+export async function copyText(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
-      // Swallowed, not fallen back on: the rejection (Safari refuses when the
-      // document isn't focused) arrives a tick later, by which point the user
-      // gesture execCommand needs is spent. Left unhandled it would log an
-      // unhandled rejection on every such copy.
-      navigator.clipboard.writeText(text).catch(() => {})
+      await navigator.clipboard.writeText(text)
       return true
     }
   } catch {
-    // fall through to the legacy path
+    // Safari refuses the write when the document isn't focused. The gesture
+    // execCommand needs is spent by the time that rejection lands, so the
+    // path below almost certainly fails too — it runs anyway so the answer
+    // comes from an attempt rather than an assumption.
   }
 
+  let area: HTMLTextAreaElement | null = null
   try {
-    const area = document.createElement('textarea')
+    area = document.createElement('textarea')
     area.value = text
     // readonly so focusing it can't raise the iOS keyboard, and 1×1 rather
     // than off-screen so scroll position stays put.
@@ -159,9 +164,13 @@ export function copyText(text: string): boolean {
 
     const ok = document.execCommand('copy')
     selection?.removeAllRanges()
-    area.remove()
     return ok
   } catch {
     return false
+  } finally {
+    // In the finally, not after execCommand: it throws in some browsers rather
+    // than returning false, and every throw would otherwise leave its own 1×1
+    // textarea behind in the body for good.
+    area?.remove()
   }
 }

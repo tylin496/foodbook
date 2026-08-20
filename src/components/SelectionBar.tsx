@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, Minus, Plus, X } from 'lucide-react'
+import { Check, Copy, CopyX, Minus, Plus, X } from 'lucide-react'
 import { useCountUp } from '../useCountUp'
 
 interface SelectionBarProps {
@@ -17,6 +17,8 @@ interface SelectionBarProps {
   // Bumped by App on every copy, whichever route it came in by. The bar owns
   // the ✓ but not the trigger — ⌘C never passes through the button.
   copySignal: number
+  // Arrives after the signal, once the write is known to have failed.
+  copyFailed: boolean
 }
 
 export function SelectionBar({
@@ -29,6 +31,7 @@ export function SelectionBar({
   onClear,
   onCopy,
   copySignal,
+  copyFailed,
 }: SelectionBarProps) {
   const [copied, setCopied] = useState(false)
   const visible = count > 0
@@ -86,6 +89,10 @@ export function SelectionBar({
 
   if (!rendered) return null
 
+  // Optimistic by design: the ✓ answers the press, and only steps back to ✗
+  // if the clipboard turns out to have refused it.
+  const copyState = !copied ? 'idle' : copyFailed ? 'failed' : 'done'
+
   const shown = visible ? { count, itemName, qty: qty ?? last.qty } : last
   const shownQty = shown.qty
   const others = shown.count - 1
@@ -131,11 +138,19 @@ export function SelectionBar({
         <button
           type="button"
           ref={copyRef}
-          className={`selection-bar-btn selection-bar-copy${copied ? ' is-copied' : ''}`}
+          className={`selection-bar-btn selection-bar-copy${copied ? ' is-copied' : ''}${
+            copyState === 'failed' ? ' is-failed' : ''
+          }`}
           onClick={onCopy}
-          aria-label={copied ? '已複製' : '複製成文字'}
+          aria-label={copyState === 'failed' ? '複製失敗' : copied ? '已複製' : '複製成文字'}
         >
-          {copied ? <Check size={16} strokeWidth={2.4} /> : <Copy size={16} />}
+          {copyState === 'failed' ? (
+            <CopyX size={16} strokeWidth={2.2} />
+          ) : copyState === 'done' ? (
+            <Check size={16} strokeWidth={2.4} />
+          ) : (
+            <Copy size={16} />
+          )}
         </button>
         <button
           type="button"

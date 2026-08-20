@@ -957,6 +957,9 @@ html, body, #root { height: var(--app-height); }
 .selection-bar-btn:hover { background: var(--glass-btn); color: var(--ink); }
 .selection-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .selection-bar-copy.is-copied { color: var(--good); animation: pop 300ms var(--ease-pop); }
+/* The pop has already run by the time the clipboard admits it refused —
+   this only recolours what is-copied put on screen, so it stays below it. */
+.selection-bar-copy.is-failed { color: var(--bad); }
 .selection-bar-divider { display: none; }
 @media (max-width: 540px) {
   /* The four fixed blocks — rule 1 + totals 180 + stepper 98 + icons 78 — plus
