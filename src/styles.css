@@ -935,6 +935,11 @@ html, body, #root { height: var(--app-height); }
   transition: background var(--dur-press) var(--ease-press), color var(--dur-press) var(--ease-press);
 }
 .selection-bar-btn::before { content: ''; position: absolute; inset: -3px; }
+/* 32px buttons 2px apart mean the two 38px tap targets overlap, and an overlap
+   goes to the later sibling — 清除 would own the right edge of 複製's own glyph.
+   Let 複製 win it instead: a tap that lands between them copies rather than
+   wiping the selection. (The old bar bought the same safety with an 8px gap.) */
+.selection-bar-copy::before { z-index: 1; }
 .selection-bar-btn:hover { background: var(--glass-btn); color: var(--ink); }
 .selection-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .selection-bar-copy.is-copied { color: var(--good); animation: pop 300ms var(--ease-pop); }
