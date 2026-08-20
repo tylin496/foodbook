@@ -472,6 +472,20 @@ html, body, #root { height: var(--app-height); }
     padding: calc(22px + var(--safe-top)) 14px calc(16px + var(--safe-bottom));
   }
 }
+/* The selection bar floats over the page rather than docking, so the scroller
+   reserves no standing space for it (see .claude/skills/ios-edge-to-edge — a
+   permanent 96px block at the bottom edge was removed for reading as chrome).
+   But scrolled to the end, the last row of cards ends up underneath it: 48px
+   of bar on one line, 95px on two. Reserve the clearance only while a
+   selection is actually up — 16px of float offset + the bar + 16px of air. */
+/* Eased, because dropping the clearance while scrolled to the very bottom
+   clamps scrollTop and the content would otherwise snap down 111px the instant
+   the selection clears. Adding it moves nothing. */
+.page-scroll { transition: padding-bottom var(--dur-exit) var(--ease-press); }
+.page-scroll.has-selection { padding-bottom: calc(80px + var(--safe-bottom)); }
+@media (max-width: 540px) {
+  .page-scroll.has-selection { padding-bottom: calc(127px + var(--safe-bottom)); }
+}
 .page-content { max-width: 1440px; margin: 0 auto; }
 
 /* — empty / no-results states — */
@@ -944,14 +958,16 @@ html, body, #root { height: var(--app-height); }
 .selection-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .selection-bar-copy.is-copied { color: var(--good); animation: pop 300ms var(--ease-pop); }
 .selection-bar-divider { display: none; }
-@media (max-width: 480px) {
-  /* The four fixed blocks — rule 1 + totals ~192 + stepper 98 + icons 78 — plus
-     22px padding and 4×12px gaps need ~440px of bar. The bar is 32px narrower
-     than the viewport, so one row stops fitting below ~475px of viewport, not
-     below 430: a 390pt phone leaves it 358px and a 440pt one (16 Pro Max) 408px
-     — both short. Switch shape here rather than shrink: compressing type and
-     controls would still overflow, only less legibly.
-     Row 1 is what's selected (name + its portions + 清除), row 2 the result
+@media (max-width: 540px) {
+  /* The four fixed blocks — rule 1 + totals 180 + stepper 98 + icons 78 — plus
+     22px padding and 4×12px gaps measure 427px, and the bar runs 32px narrower
+     than the viewport. So one row physically stops fitting at 459px of
+     viewport, not at 430 (a 390pt phone leaves the bar 358px, a 440pt 16 Pro
+     Max 408px), and it stops fitting *usefully* well above that: at 481px the
+     name column is down to 22px, one ellipsis. Switch shape at 540px, where
+     the name still gets 81px — compressing type and controls instead would
+     lose legibility and still overflow. */
+  /* Row 1 is what's selected (name + its portions + 清除), row 2 the result
      (totals + 複製). Same type scale, icon size, stepper and number columns as
      the wide bar — only the arrangement differs. */
   .selection-bar {

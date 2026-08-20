@@ -897,7 +897,7 @@ function FoodBook({
 
   return (
     <>
-      <div className="page-scroll">
+      <div className={`page-scroll${selectedItems.length > 0 ? ' has-selection' : ''}`}>
         <div className="page-content">
           <header className="page-topbar">
             <div className="title-row">
