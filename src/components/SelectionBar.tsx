@@ -56,9 +56,13 @@ export function SelectionBar({
   if (!rendered) return null
 
   const handleCopy = () => {
-    onCopy()
+    // The tick is feedback for the tap, not for the clipboard call — so it is
+    // set first and unconditionally. Ordered the other way, an origin without
+    // navigator.clipboard (see copyText) threw on the way out of onCopy and
+    // took the whole ✓/pop with it, which read as the animation disappearing.
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+    onCopy()
   }
 
   const shown = visible ? { count, itemName, qty: qty ?? last.qty } : last

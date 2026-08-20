@@ -11,7 +11,7 @@ import { SelectionBar } from './components/SelectionBar'
 import { FoodModal } from './components/FoodModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
-import { formatItemsAsText, generateId, roundAmount, sortBySelected, toNumber } from './utils'
+import { copyText, formatItemsAsText, generateId, roundAmount, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
 import { embedContext, postSelectionTotals } from './embed'
 
@@ -551,7 +551,7 @@ function FoodBook({
     filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id))
 
   const copySelectedAsText = () => {
-    navigator.clipboard.writeText(
+    copyText(
       formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides, isOwner ? undefined : guestIngredientOverrides),
     )
   }

@@ -115,3 +115,44 @@ export function formatItemsAsText(
 
   return lines.join('\n')
 }
+
+// navigator.clipboard exists only on secure origins. Served over plain http —
+// which is how the app is reached from a phone on the LAN during development —
+// the whole `clipboard` object is undefined, so reaching straight for
+// `.writeText` throws before anything after the call can run. Keep the throw
+// in here, and fall back to the old textarea + execCommand path so the copy
+// still lands on those origins.
+export function copyText(text: string): boolean {
+  try {
+    if (navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+
+  try {
+    const area = document.createElement('textarea')
+    area.value = text
+    // iOS ignores .select() on a plain readonly textarea; it copies a range,
+    // so the node has to be editable and the selection made explicitly.
+    area.contentEditable = 'true'
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none'
+    document.body.appendChild(area)
+
+    const range = document.createRange()
+    range.selectNodeContents(area)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    area.setSelectionRange(0, text.length)
+
+    const ok = document.execCommand('copy')
+    selection?.removeAllRanges()
+    area.remove()
+    return ok
+  } catch {
+    return false
+  }
+}
