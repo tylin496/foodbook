@@ -268,6 +268,15 @@ textarea.input { min-height: 90px; resize: vertical; }
 }
 .sort-pill:hover { color: var(--ink-2); }
 .sort-pill.is-active { color: #fff; background: var(--accent-strong); }
+/* Not a sort — an action on the list — so it sits apart at the far end and
+   wears an outline instead of the pills' filled chip, until it's on. */
+.sort-select-all {
+  margin-left: auto; flex: none; background: none;
+  box-shadow: inset 0 0 0 1px var(--off-ring);
+}
+.sort-select-all:hover { background: var(--bg-soft); }
+.sort-select-all.is-active { box-shadow: none; }
+.sort-select-all.is-active:hover { background: var(--accent-strong); }
 
 .btn-add-pill {
   display: inline-flex; align-items: center; gap: 6px;

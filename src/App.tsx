@@ -544,6 +544,12 @@ function FoodBook({
 
   const selectAll = () => setSelectedIds(new Set(filteredItems.map((item) => item.id)))
 
+  // Touch has no ⌘A, so the sort bar carries the 全選 pill. It acts on what's
+  // on screen (filteredItems — the search's result set), and flips to 取消全選
+  // once that's all selected, so the one pill both selects and undoes.
+  const allSelected =
+    filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id))
+
   const copySelectedAsText = () => {
     navigator.clipboard.writeText(
       formatItemsAsText(selectedItems, isOwner ? undefined : guestOverrides, isOwner ? undefined : guestIngredientOverrides),
@@ -987,6 +993,14 @@ function FoodBook({
                 onClick={() => handleSortPillClick('protein')}
               >
                 蛋白質效率{sortMode === 'protein' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+              </button>
+              <button
+                type="button"
+                className={`sort-pill sort-select-all${allSelected ? ' is-active' : ''}`}
+                aria-pressed={allSelected}
+                onClick={() => (allSelected ? clearSelection() : selectAll())}
+              >
+                {allSelected ? '取消全選' : '全選'}
               </button>
             </div>
           )}
