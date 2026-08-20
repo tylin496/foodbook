@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Minus, Plus, X } from 'lucide-react'
 import { useCountUp } from '../useCountUp'
 
@@ -39,6 +39,8 @@ export function SelectionBar({
   // bar is gone.
   const [last, setLast] = useState({ count, itemName, qty })
 
+  const copyRef = useRef<HTMLButtonElement>(null)
+
   const displayProtein = useCountUp(totalProtein)
   const displayCalories = useCountUp(totalCalories)
 
@@ -63,6 +65,17 @@ export function SelectionBar({
   useEffect(() => {
     if (copySignal === 0) return
     setCopied(true)
+    // Copying again inside the 1.5s leaves .is-copied already on the button,
+    // and an unchanged class replays nothing — the second copy would land with
+    // no acknowledgement at all. Clear the animation and force the layout flush
+    // that ends its current run, so restoring it starts a fresh one. Cheaper
+    // than remounting the button, which would replay it but drop focus.
+    const el = copyRef.current
+    if (el) {
+      el.style.animation = 'none'
+      void el.offsetWidth
+      el.style.animation = ''
+    }
     const timer = setTimeout(() => setCopied(false), 1500)
     return () => clearTimeout(timer)
   }, [copySignal])
@@ -113,6 +126,7 @@ export function SelectionBar({
       <div className="selection-bar-actions">
         <button
           type="button"
+          ref={copyRef}
           className={`selection-bar-btn selection-bar-copy${copied ? ' is-copied' : ''}`}
           onClick={onCopy}
           aria-label={copied ? '已複製' : '複製成文字'}
