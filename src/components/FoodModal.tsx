@@ -45,6 +45,20 @@ export function FoodModal({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  // setDoc doesn't settle until the server acknowledges, so with no connection
+  // the button sat on 儲存中… indefinitely and the dialog read as hung. The
+  // write is already in localStorage by then (useCloudItems writes the cache
+  // synchronously) and Firestore replays it on reconnect, so say so rather
+  // than claiming a failure that hasn't happened.
+  const [saveSlow, setSaveSlow] = useState(false)
+  useEffect(() => {
+    if (saveState !== 'saving') {
+      setSaveSlow(false)
+      return
+    }
+    const timer = window.setTimeout(() => setSaveSlow(true), 6000)
+    return () => window.clearTimeout(timer)
+  }, [saveState])
   // Which sub-items are expanded. Collapsed by default, but no longer
   // single-expand: opening one closed the other, so entering numbers across
   // two sub-items meant reopening the one you were just in, every time.
@@ -1018,18 +1032,13 @@ export function FoodModal({
                     key={sub.id}
                     data-sub-item-id={sub.id}
                   >
-                    <div
-                      className="sub-item-row-top"
-                      role="button"
-                      tabIndex={0}
-                      aria-expanded={expanded}
-                      onClick={() => toggleExpanded(sub.id)}
-                      onKeyDown={(e) => {
-                        if (e.key !== 'Enter' && e.key !== ' ') return
-                        e.preventDefault()
-                        toggleExpanded(sub.id)
-                      }}
-                    >
+                    {/* Not role="button": it holds a grip, a checkbox, a text
+                        input and a delete button, and interactive content
+                        nested inside a role="button" is invalid and unreachable
+                        — the same defect the food card had. The row still
+                        expands on click for pointer users; the chevron is the
+                        real control. */}
+                    <div className="sub-item-row-top" onClick={() => toggleExpanded(sub.id)}>
                       <button
                         type="button"
                         className="sub-item-grip"
@@ -1091,7 +1100,18 @@ export function FoodModal({
                       >
                         <X size={14} />
                       </button>
-                      <ChevronDown size={14} className="sub-item-chevron" />
+                      <button
+                        type="button"
+                        className="sub-item-expand"
+                        aria-expanded={expanded}
+                        aria-label={expanded ? '收合子項目' : '展開子項目'}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleExpanded(sub.id)
+                        }}
+                      >
+                        <ChevronDown size={14} className="sub-item-chevron" />
+                      </button>
                     </div>
                     {expanded && (
                     <div className="sub-item-row-expanded" onClick={(e) => e.stopPropagation()}>
@@ -1319,6 +1339,9 @@ export function FoodModal({
             {saveState === 'error' && <div className="upload-error">儲存失敗，請確認網路連線後重試</div>}
             {saveState !== 'error' && draft.name.trim().length === 0 && (
               <div className="save-hint">請先填食物名稱</div>
+            )}
+            {saveState === 'saving' && saveSlow && (
+              <div className="save-hint">雲端還沒回應。變更已存在這台裝置，可以先關閉</div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-secondary" onClick={onCancel}>

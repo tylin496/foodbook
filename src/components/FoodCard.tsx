@@ -197,6 +197,11 @@ export function FoodCard({
 
   const handlePhotoPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
+    // Cleared here rather than on pointerup, because the click it suppresses
+    // arrives *after* that. A long press released off the card synthesizes no
+    // click at all, so the flag would otherwise still be set and eat the next
+    // real tap on this card.
+    longPressFired.current = false
     lastPointerType.current = e.pointerType
     if (!reorderEnabled) {
       // Only a *held* press asks to reorder — a tap is just a tap, and toasting

@@ -159,7 +159,7 @@ function FoodBook({
     if (!subwayItem) return
     if (isOwner) {
       const subId = subwayItem.subItems?.[0]?.id ?? generateId()
-      setItems((prev) =>
+      commit((prev) =>
         prev.map((item) =>
           item.id === subwayItem.id
             ? {
@@ -440,7 +440,10 @@ function FoodBook({
     const targetId = cardEl?.dataset.foodId
     if (!targetId || targetId === dragging.id) return
     captureRects(dragging.id)
-    setItems((prev) => {
+    // Through commit, not setItems: a drag fires one write per row it crosses,
+    // and every one of them was silent on failure. The toast dedupes plain
+    // messages by text, so a whole failed drag still says it once.
+    commit((prev) => {
       const fromIndex = prev.findIndex((item) => item.id === dragging.id)
       const toIndex = prev.findIndex((item) => item.id === targetId)
       if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev
@@ -449,7 +452,7 @@ function FoodBook({
       next.splice(toIndex, 0, moved)
       return next
     })
-  }, [setItems, captureRects])
+  }, [commit, captureRects])
 
   const applyDragReorderRef = useRef(applyDragReorder)
   applyDragReorderRef.current = applyDragReorder

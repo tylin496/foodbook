@@ -1189,7 +1189,14 @@ html, body, #root { height: var(--app-height); }
   flex: none; color: var(--ink-4);
   transition: transform 180ms var(--ease-enter);
 }
-.sub-item-row-top[aria-expanded="true"] .sub-item-chevron { transform: rotate(180deg); }
+.sub-item-expand {
+  position: relative;
+  flex: none; width: 26px; height: 30px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; cursor: pointer; color: var(--ink-4);
+}
+.sub-item-expand::before { content: ''; position: absolute; inset: -3px; }
+.sub-item-expand[aria-expanded="true"] .sub-item-chevron { transform: rotate(180deg); }
 .sub-item-row-expanded { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .sub-item-grip {
   position: relative;
