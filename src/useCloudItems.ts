@@ -34,6 +34,11 @@ function itemsDocRef(uid: string) {
 export function useCloudItems(uid: string) {
   const [items, setItemsState] = useState<FoodItem[]>(() => readLocalCache())
   const [loading, setLoading] = useState(true)
+  // A snapshot listener that errors (rules changed, offline first load, quota)
+  // unsubscribes itself and never calls back again. Without this the page just
+  // sat on "同步中…" forever, with nothing said and nothing to press.
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const migratedRef = useRef(false)
   // Chains setDoc calls so they hit Firestore in call order. Without this,
   // two writes fired close together race on the network and whichever
@@ -43,27 +48,40 @@ export function useCloudItems(uid: string) {
 
   useEffect(() => {
     setLoading(true)
+    setLoadError(false)
     migratedRef.current = false
     writeQueueRef.current = Promise.resolve()
     const ref = itemsDocRef(uid)
-    const unsubscribe = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        const remote = (snap.data().items ?? []) as FoodItem[]
-        setItemsState(remote)
-        writeLocalCache(remote)
-      } else if (!migratedRef.current) {
-        // First time this account signs in: carry over whatever is already
-        // sitting in this browser's localStorage instead of starting empty.
-        migratedRef.current = true
-        const local = readLocalCache()
-        setDoc(ref, { items: local }).catch(() => {
-          // not signed in as the owner — nothing to migrate on this visit
-        })
-      }
-      setLoading(false)
-    })
+    const unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        setLoadError(false)
+        if (snap.exists()) {
+          const remote = (snap.data().items ?? []) as FoodItem[]
+          setItemsState(remote)
+          writeLocalCache(remote)
+        } else if (!migratedRef.current) {
+          // First time this account signs in: carry over whatever is already
+          // sitting in this browser's localStorage instead of starting empty.
+          migratedRef.current = true
+          const local = readLocalCache()
+          setDoc(ref, { items: local }).catch(() => {
+            // not signed in as the owner — nothing to migrate on this visit
+          })
+        }
+        setLoading(false)
+      },
+      () => {
+        // The listener is already torn down by the time this runs — `retry`
+        // below re-subscribes by bumping the effect's key.
+        setLoadError(true)
+        setLoading(false)
+      },
+    )
     return unsubscribe
-  }, [uid])
+  }, [uid, reloadKey])
+
+  const retry = useCallback(() => setReloadKey((n) => n + 1), [])
 
   // Resolves with { ok: false } on a real write failure (permission denied,
   // quota, etc.) so callers that care — e.g. the save button's success state
@@ -93,5 +111,5 @@ export function useCloudItems(uid: string) {
     [uid],
   )
 
-  return [items, setItems, loading] as const
+  return { items, setItems, loading, loadError, retry }
 }

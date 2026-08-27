@@ -39,6 +39,7 @@ export default function App() {
   return (
     <FoodBook
       isOwner={isOwner}
+      isSignedIn={user !== null}
       userLabel={user?.displayName ?? user?.email ?? ''}
       photoURL={user?.photoURL ?? null}
       onSignIn={signIn}
@@ -50,6 +51,7 @@ export default function App() {
 
 function FoodBook({
   isOwner,
+  isSignedIn,
   userLabel,
   photoURL,
   onSignIn,
@@ -57,13 +59,17 @@ function FoodBook({
   signInError,
 }: {
   isOwner: boolean
+  // Signed in with an account that isn't the owner's: the app is read-only for
+  // them, but they still deserve to be told whose account they're on and how to
+  // get back out — offering "使用 Google 登入" again was a dead end.
+  isSignedIn: boolean
   userLabel: string
   photoURL: string | null
   onSignIn: () => void
   onLogOut: () => void
   signInError: boolean
 }) {
-  const [items, setItems, itemsLoading] = useCloudItems(OWNER_UID)
+  const { items, setItems, loading: itemsLoading, loadError, retry: retryLoad } = useCloudItems(OWNER_UID)
   const {
     overrides: guestOverrides,
     ingredientOverrides: guestIngredientOverrides,
@@ -172,9 +178,12 @@ function FoodBook({
     )
   }, [items, isOwner, guestSubwayItem])
 
-  const closeSubway = () => {
+  // Two ways out, and they are not the same: 確定 folds the calculator's build
+  // back onto the card, ✕/Esc/backdrop back out without touching it. They used
+  // to be identical, so a look-and-leave silently rewrote the meal.
+  const dismissSubway = (commit: boolean) => {
     if (subwayClosing) return
-    if (subwayResultRef.current) applySubwayResult(subwayResultRef.current)
+    if (commit && subwayResultRef.current) applySubwayResult(subwayResultRef.current)
     setSubwayClosing(true)
     window.setTimeout(() => {
       setSubwayOpen(false)
@@ -698,10 +707,6 @@ function FoodBook({
     }, 180)
   }
 
-  const handleImageUploaded = (id: string, url: string) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, imageUrl: url } : item)))
-  }
-
   // qty 0 excludes the sub-item but keeps its stored qty, so re-including it
   // restores the prior count.
   const setSubItemQty = (id: string, subId: string, qty: number) => {
@@ -978,9 +983,25 @@ function FoodBook({
                    signing in again. */
                 <div className="signin-wrap">
                   {signInError && <div className="upload-error">登入失敗，請重試</div>}
-                  <button type="button" className="btn btn-secondary" onClick={onSignIn}>
-                    使用 Google 登入
-                  </button>
+                  {isSignedIn ? (
+                    <div className="readonly-badge">
+                      <span className="readonly-badge-label">唯讀</span>
+                      <span className="readonly-badge-user">{userLabel}</span>
+                      <button
+                        type="button"
+                        className="readonly-badge-signout"
+                        onClick={async () => {
+                          if (await confirm(`確定要登出 ${userLabel} 嗎？`)) onLogOut()
+                        }}
+                      >
+                        登出
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" className="btn btn-secondary" onClick={onSignIn}>
+                      使用 Google 登入
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1020,8 +1041,16 @@ function FoodBook({
             </div>
           )}
 
-          {itemsLoading && !hasAnyItems && <div className="no-results">同步中…</div>}
-          {!itemsLoading && !hasAnyItems && (
+          {itemsLoading && !hasAnyItems && !loadError && <div className="no-results">同步中…</div>}
+          {loadError && !hasAnyItems && (
+            <div className="no-results load-error">
+              <div>無法載入資料，請確認網路連線</div>
+              <button type="button" className="btn btn-secondary" onClick={retryLoad}>
+                重試
+              </button>
+            </div>
+          )}
+          {!itemsLoading && !loadError && !hasAnyItems && (
             <div className="empty-state">
               <ImageIcon size={48} />
               <h3>還沒有任何紀錄</h3>
@@ -1084,7 +1113,6 @@ function FoodBook({
 
       {modalOpen && activeId && (
         <FoodModal
-          itemId={activeId}
           draft={draft}
           isEditing={editingId !== null}
           closing={modalClosing}
@@ -1092,13 +1120,17 @@ function FoodBook({
           onSave={handleSave}
           onCancel={closeModal}
           onDelete={() => editingId && deleteItem(editingId)}
-          onImageUploaded={handleImageUploaded}
           confirm={confirm}
         />
       )}
 
       {subwayMounted && (
-        <SubwayScreen visible={subwayOpen} closing={subwayClosing} onClose={closeSubway} />
+        <SubwayScreen
+          visible={subwayOpen}
+          closing={subwayClosing}
+          onCancel={() => dismissSubway(false)}
+          onConfirm={() => dismissSubway(true)}
+        />
       )}
 
       {confirmDialogProps && <ConfirmDialog {...confirmDialogProps} />}

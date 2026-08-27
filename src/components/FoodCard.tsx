@@ -439,11 +439,18 @@ export function FoodCard({
           }}
           onClearAll={() => {
             sheetChangedRef.current = true
-            // handleSetSubItemQty (App.tsx) already blocks dropping the last
-            // selected sub-item to 0 — that's a deliberate app-wide invariant
-            // (ed8fb2e), so looping this needs no extra "keep at least one"
-            // guard of its own; the last row just stays selected.
-            subItems.forEach((sub) => onSetSubItemQty(item.id, sub.id, 0))
+            // handleSetSubItemQty (App.tsx) blocks dropping the *last* selected
+            // sub-item to 0 — a deliberate app-wide invariant (ed8fb2e). Looping
+            // blind meant whichever row happened to be processed last survived,
+            // so 清除 left a different row checked depending on what was checked
+            // before. Keep the first row explicitly and clear the rest, so the
+            // outcome is the same every time and matches what the sheet shows.
+            const [first, ...rest] = subItems
+            if (!first) return
+            if (getEffectiveSubItemQty(first, guestOverrides) <= 0) {
+              onSetSubItemQty(item.id, first.id, 1)
+            }
+            rest.forEach((sub) => onSetSubItemQty(item.id, sub.id, 0))
           }}
           onReorderIngredients={
             onReorderIngredients

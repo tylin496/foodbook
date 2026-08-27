@@ -1396,3 +1396,37 @@ html, body, #root { height: var(--app-height); }
   .sub-items-sheet-handle { display: none; }
 }
 
+
+/* — read-only session badge — a signed-in account that isn't the owner's.
+   Offering "使用 Google 登入" again there was a dead end: pressing it reopened
+   a popup that changed nothing, and there was no way back out. */
+.readonly-badge {
+  display: flex; align-items: center; gap: 8px;
+  height: 28px; padding: 0 4px 0 10px;
+  border-radius: var(--radius-pill);
+  box-shadow: inset 0 0 0 1px var(--off-ring);
+  font-size: 12px; color: var(--ink-3);
+}
+.readonly-badge-label {
+  font-weight: 700; font-size: 10px; letter-spacing: .04em;
+  color: var(--chip-ink); background: var(--chip-bg);
+  border-radius: var(--radius-pill); padding: 1px 6px;
+}
+.readonly-badge-user {
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.readonly-badge-signout {
+  position: relative;
+  border: none; background: transparent; cursor: pointer;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ink-3);
+  padding: 0 6px; height: 22px; border-radius: var(--radius-pill);
+}
+.readonly-badge-signout:hover { background: var(--bg-soft); color: var(--ink); }
+.readonly-badge-signout::before { content: ''; position: absolute; inset: -6px -2px; }
+
+/* — load failure — the snapshot listener dies on a rules/quota/offline error
+   and never calls back, so this is the only thing standing between the user
+   and a permanent "同步中…". */
+.no-results.load-error {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+}

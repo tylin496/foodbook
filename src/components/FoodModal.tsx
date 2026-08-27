@@ -8,7 +8,6 @@ import type { ConfirmOptions } from '../useConfirm'
 import { formatAmount, generateId, roundAmount, toNumber } from '../utils'
 
 interface FoodModalProps {
-  itemId: string
   draft: FoodDraft
   isEditing: boolean
   closing: boolean
@@ -18,12 +17,10 @@ interface FoodModalProps {
   onSave: () => Promise<boolean>
   onCancel: () => void
   onDelete: () => void
-  onImageUploaded: (id: string, url: string) => void
   confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
 }
 
 export function FoodModal({
-  itemId,
   draft,
   isEditing,
   closing,
@@ -31,7 +28,6 @@ export function FoodModal({
   onSave,
   onCancel,
   onDelete,
-  onImageUploaded,
   confirm,
 }: FoodModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -764,8 +760,10 @@ export function FoodModal({
     setUploading(true)
     try {
       const url = await uploadToCloudinary(file)
+      // Only the draft — writing it straight onto the record here meant a photo
+      // swapped and then abandoned with 取消 had already replaced the old one.
+      // It lands with everything else when 儲存 runs.
       onChange({ ...draft, imageUrl: url })
-      onImageUploaded(itemId, url)
     } catch {
       setUploadError(true)
     } finally {
@@ -785,6 +783,10 @@ export function FoodModal({
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return
           if (e.nativeEvent.isComposing) return
+          // Enter is a save shortcut for the record's own fields only. Inside
+          // the sub-items editor it's an ordinary keystroke — pressing it after
+          // typing an ingredient name used to save and close the whole dialog.
+          if ((e.target as HTMLElement).closest('.sub-items-section')) return
           e.preventDefault()
           handleSaveClick()
         }}

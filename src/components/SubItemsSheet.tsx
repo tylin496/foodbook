@@ -318,7 +318,12 @@ export function SubItemsSheet({
                   <button
                     type="button"
                     className="sub-items-sheet-checkbox"
-                    aria-label={selected ? '取消計入加總' : '計入加總'}
+                    aria-label={
+                      isLastSelected ? '至少要保留一項' : selected ? '取消計入加總' : '計入加總'
+                    }
+                    // Disabled with no explanation read as a broken control —
+                    // especially right after 清除, which lands here by design.
+                    title={isLastSelected ? '至少要保留一項' : undefined}
                     disabled={isLastSelected}
                     onClick={() => onSetQty(sub.id, activeQty > 0 ? 0 : 1)}
                   >
