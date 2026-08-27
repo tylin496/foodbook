@@ -260,6 +260,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   overflow-x: auto;
 }
 .sort-pill {
+  position: relative;
   flex: none; height: 28px; padding: 0 12px; border: none; cursor: pointer;
   border-radius: var(--radius-pill);
   font-family: var(--font-ui); font-size: 12.5px; font-weight: 600;
@@ -267,6 +268,7 @@ textarea.input { min-height: 90px; resize: vertical; }
   transition: background 120ms var(--ease-press), color 120ms var(--ease-press);
 }
 .sort-pill:hover { color: var(--ink-2); }
+.sort-pill::before { content: ''; position: absolute; inset: -6px -2px; }
 .sort-pill.is-active { color: #fff; background: var(--accent-strong); }
 /* Not a sort — an action on the list — so it sits apart at the far end and
    wears an outline instead of the pills' filled chip, until it's on. */
@@ -287,12 +289,14 @@ textarea.input { min-height: 90px; resize: vertical; }
   box-shadow: 0 1px 2px rgba(17, 24, 39, .14);
 }
 .avatar-btn {
+  position: relative;
   width: 28px; height: 28px; flex-shrink: 0; border: none; padding: 0; cursor: pointer;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 14px;
   overflow: hidden; font-family: var(--font-ui);
 }
 .avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-btn::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
 
 /* — search bar — */
 .search-bar {
@@ -653,25 +657,29 @@ html, body, #root { height: var(--app-height); }
   flex: 1; min-width: 0;
 }
 .food-card .calculator-badge {
+  position: relative;
   flex: none;
   display: inline-flex; align-items: center; gap: 3px;
-  height: 17px; padding: 0 6px 0 5px;
+  height: 19px; padding: 0 7px 0 6px;
   border-radius: 999px;
   font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: .01em;
   background: color-mix(in srgb, var(--chip-ink) 16%, transparent);
   color: var(--chip-ink);
-  cursor: pointer;
+  cursor: pointer; border: none; font-family: inherit;
 }
+/* 19px visible, 35px tall tappable — it sits on the name line, whose only
+   other occupant is text, so the overhang has nothing to steal from. */
+.food-card .calculator-badge::before { content: ''; position: absolute; inset: -8px -4px; }
 .food-card .card-body {
   display: flex; flex-direction: column; gap: 8px;
   padding: 11px 13px 12px;
-  height: 132px;
+  height: 136px;
   box-sizing: border-box;
   opacity: 1;
   flex: none;
 }
 @media (max-width: 430px) {
-  .food-card .card-body { height: 126px; padding: 10px 12px 11px; }
+  .food-card .card-body { height: 130px; padding: 10px 12px 11px; }
 }
 .food-card .stat-grid {
   display: grid; grid-template-columns: 1fr 1px 1fr;
@@ -695,12 +703,12 @@ html, body, #root { height: var(--app-height); }
   .food-card .stat-rule { height: 28px; }
 }
 .food-card .sub-items-summary {
-  display: flex; gap: 4px; min-height: 19px; overflow: hidden;
+  display: flex; gap: 4px; min-height: 21px; overflow: hidden;
 }
 .food-card .sub-item-chip {
   flex: 0 1 auto; min-width: 0;
   display: inline-flex; align-items: center;
-  font-family: var(--font-ui); font-size: 11px; font-weight: 500; line-height: 19px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 500; line-height: 21px;
   color: var(--ink-2);
   background: color-mix(in srgb, var(--ink) 10%, transparent);
   box-shadow: none;
@@ -727,7 +735,7 @@ html, body, #root { height: var(--app-height); }
   flex: none; display: flex; align-items: center; gap: 2px;
 }
 .sub-item-qty-stepper button {
-  all: unset; box-sizing: border-box; cursor: pointer;
+  all: unset; box-sizing: border-box; cursor: pointer; position: relative;
   display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px;
   border-radius: var(--radius-pill);
@@ -742,6 +750,9 @@ html, body, #root { height: var(--app-height); }
    beats the global :focus-visible rule — restore it here or these lose their
    keyboard focus ring entirely. Same for the two rules below. */
 .sub-item-qty-stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 24px visible, 36×36 tappable. The horizontal overhang stops short of the
+   1px gap's midpoint, so − and + never trade taps with each other. */
+.sub-item-qty-stepper button::before { content: ''; position: absolute; inset: -6px -3px; }
 .sub-item-qty-stepper-value {
   min-width: 24px;
   font-family: var(--font-mono); font-size: 13px; font-weight: 700;
@@ -755,12 +766,8 @@ html, body, #root { height: var(--app-height); }
 /* — sub-items sheet — a chip click expands into this, listing every
    sub-item on the card at once: name, ingredients, and a quantity picker. */
 .sub-items-sheet { width: min(420px, 100%); }
-.sub-items-sheet-list {
-  display: flex; flex-direction: column; gap: var(--space-3);
-  max-height: 60vh; overflow-y: auto;
-}
 .sub-items-sheet-row {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 8px;
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--rule);
 }
@@ -780,7 +787,7 @@ html, body, #root { height: var(--app-height); }
   color: var(--ink-4);
 }
 .sub-items-sheet-ingredients {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 8px;
   padding-left: var(--space-2);
 }
 .sub-item-detail-ingredient-row {
@@ -800,7 +807,7 @@ html, body, #root { height: var(--app-height); }
 }
 .sub-item-detail-ingredient-grip:hover { color: var(--accent); }
 .sub-item-detail-ingredient-row.is-dragging .sub-item-detail-ingredient-grip { cursor: grabbing; color: var(--accent); }
-.sub-item-detail-ingredient-grip::before { content: ''; position: absolute; inset: -3px; }
+.sub-item-detail-ingredient-grip::before { content: ''; position: absolute; inset: -8px -4px; }
 .sub-item-detail-ingredient-name {
   /* flex-grow: 0 (default) on purpose — the qty stepper/add button sits right
      next to the name instead of being pushed to the row's far edge. */
@@ -820,7 +827,7 @@ html, body, #root { height: var(--app-height); }
   flex: none; display: flex; align-items: center; gap: 1px;
 }
 .ingredient-qty-stepper button {
-  all: unset; box-sizing: border-box; cursor: pointer;
+  all: unset; box-sizing: border-box; cursor: pointer; position: relative;
   display: flex; align-items: center; justify-content: center;
   width: 20px; height: 20px;
   border-radius: var(--radius-pill);
@@ -832,6 +839,8 @@ html, body, #root { height: var(--app-height); }
 .ingredient-qty-stepper button:disabled { color: var(--ink-4); cursor: default; }
 .ingredient-qty-stepper button:disabled:hover { background: none; }
 .ingredient-qty-stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 20px visible, 26×36 tappable — the tightest row in the app. */
+.ingredient-qty-stepper button::before { content: ''; position: absolute; inset: -8px -3px; }
 .ingredient-qty-stepper-value {
   min-width: 18px;
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
@@ -1211,7 +1220,7 @@ html, body, #root { height: var(--app-height); }
 .sub-item-qty-wrap .sub-item-qty-x {
   font-size: 12px; color: color-mix(in srgb, var(--ink) 55%, transparent);
 }
-.sub-item-row-expanded .input.sub-item-qty { flex: none; width: 44px; text-align: center; padding-left: 4px; padding-right: 4px; }
+.sub-item-row-expanded .input.sub-item-qty { flex: none; width: 50px; font-size: 15px; text-align: center; padding-left: 4px; padding-right: 4px; }
 .sub-item-qty-hint {
   font-size: 11px; color: color-mix(in srgb, var(--ink) 55%, transparent);
   padding-left: 2px;
@@ -1246,7 +1255,7 @@ html, body, #root { height: var(--app-height); }
 .ingredient-row.is-dragging { position: relative; cursor: grabbing; opacity: 1; }
 .ingredient-row-top { display: flex; gap: 6px; align-items: center; }
 .ingredient-row-top .input { flex: 1; }
-.ingredient-row-top .input.sub-item-qty { flex: none; width: 40px; text-align: center; padding-left: 4px; padding-right: 4px; }
+.ingredient-row-top .input.sub-item-qty { flex: none; width: 46px; font-size: 15px; text-align: center; padding-left: 4px; padding-right: 4px; }
 .ingredient-row .sub-item-remove { width: 26px; height: 26px; }
 .ingredient-grip {
   position: relative;
@@ -1290,7 +1299,10 @@ html, body, #root { height: var(--app-height); }
 }
 .dialog.sub-items-sheet {
   width: min(480px, 100%);
-  max-height: 78vh;
+  /* Not 78vh: in the browser vh is the *large* viewport, so with Safari's
+     toolbar showing the sheet ran taller than the visible area. --app-height
+     is the token every other full-height box here uses. */
+  max-height: calc(var(--app-height) * .78);
   overflow: hidden;
   border-radius: 20px 20px 0 0;
   padding: 0 0 calc(14px + var(--safe-bottom));
@@ -1321,12 +1333,14 @@ html, body, #root { height: var(--app-height); }
 .sub-items-sheet-header-sub { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
 .sub-items-sheet-quick-actions { flex: none; display: flex; gap: 8px; padding: 0 18px 8px; }
 .sub-items-sheet-pill {
+  position: relative;
   height: 26px; padding: 0 12px; border: none; border-radius: var(--radius-pill);
   background: none; box-shadow: inset 0 0 0 1px var(--rule-strong);
   color: var(--ink-2); font-family: var(--font-ui); font-size: 12px; font-weight: 600;
   cursor: pointer;
 }
 .sub-items-sheet-pill:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.sub-items-sheet-pill::before { content: ''; position: absolute; inset: -6px -2px; }
 .sub-items-sheet-list {
   flex: 1; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: var(--space-3);
@@ -1363,6 +1377,8 @@ html, body, #root { height: var(--app-height); }
   animation: lo-pop var(--dur-pop) var(--ease-pop);
 }
 .sub-items-sheet-checkbox:disabled { cursor: default; opacity: .5; }
+/* 22px visible, 36×36 tappable. */
+.sub-items-sheet-checkbox::before { content: ''; position: absolute; inset: -7px; }
 
 .sub-item-detail-ingredient-checkbox {
   position: relative;
@@ -1374,6 +1390,10 @@ html, body, #root { height: var(--app-height); }
   background: var(--accent-strong); box-shadow: none;
   animation: lo-pop var(--dur-pop) var(--ease-pop);
 }
+/* 16px visible, 32×32 tappable. The grip to its left gives up the 4px they
+   overlap — a mis-tap there toggles instead of starting a drag, which is the
+   cheaper of the two mistakes. */
+.sub-item-detail-ingredient-checkbox::before { content: ''; position: absolute; inset: -8px; }
 
 /* Desktop: the chip sheet reads as a normal centered dialog instead of a
    bottom-anchored sheet — the slide-from-edge affordance is a phone/touch
@@ -1429,4 +1449,41 @@ html, body, #root { height: var(--app-height); }
    and a permanent "同步中…". */
 .no-results.load-error {
   display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+}
+
+/* Freezes the page under an open dialog. The scroller keeps its scrollTop, so
+   dismissing puts the user back exactly where they were — which is the whole
+   point: on iOS a finger landing outside the sheet used to scroll the list
+   behind it and lose their place. Paired with `inert` on the same elements
+   (see pageLock.ts), which handles the pointer and a11y halves. */
+html.has-dialog .page-scroll { overflow: hidden; }
+
+.sub-items-sheet-empty {
+  padding: var(--space-6) var(--space-2);
+  text-align: center; font-size: 13px; color: var(--ink-3);
+}
+/* The chips are <button>s now (they were spans, unreachable by keyboard and
+   invisible to a screen reader) — strip the UA chrome the class never had. */
+.food-card button.sub-item-chip {
+  border: none; font-family: inherit; text-align: left;
+}
+
+/* — edit dialog chrome — the ✕ and the 儲存 row used to sit in the same
+   scroll flow as the form, so with a few sub-items open you had to scroll to
+   the very bottom to find the save button. Same three-part layout the
+   sub-items sheet already uses: fixed header, scrolling middle, fixed footer. */
+.dialog.food-modal {
+  padding: 0; gap: 0; overflow: hidden;
+}
+.food-modal > .dialog-header {
+  flex: none; padding: 16px 18px 10px;
+}
+.food-modal-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 0 18px 14px;
+}
+.food-modal > .dialog-actions {
+  flex: none; margin: 0; padding: 12px 18px calc(14px + var(--safe-bottom));
+  border-top: 1px solid var(--rule);
 }

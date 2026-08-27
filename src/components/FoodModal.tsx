@@ -131,6 +131,10 @@ export function FoodModal({
 
   const selectSubItem = (id: string, selected: boolean) => {
     if (!selected) {
+      // The row is about to jump to the bottom of the list — replay it as
+      // motion (see the FLIP effect below) instead of teleporting it out from
+      // under the pointer.
+      captureSubItemRects()
       // Unchecking drops the row to the bottom of the list instead of leaving
       // it in place, so active items stay grouped at the top.
       const target = draft.subItems.find((sub) => sub.id === id)
@@ -222,6 +226,7 @@ export function FoodModal({
     if (!sub) return
     const ingredients = sub.ingredients ?? []
     if (!selected) {
+      captureIngredientRects(subId)
       // Mirrors selectSubItem: unchecking drops the row to the bottom of the
       // list instead of leaving it in place, so active ingredients stay
       // grouped at the top.
@@ -778,7 +783,7 @@ export function FoodModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="food-modal-title"
-        className={`dialog${closing ? ' is-closing' : ''}`}
+        className={`dialog food-modal${closing ? ' is-closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key !== 'Enter') return
@@ -798,6 +803,7 @@ export function FoodModal({
           </button>
         </div>
 
+        <div className="food-modal-body">
         <div className="food-modal-photo-row" onClick={() => fileInputRef.current?.click()}>
           <div className="food-modal-photo">
             {preview ? <img src={preview} alt="食物照片預覽" /> : <Camera size={22} strokeWidth={1.8} />}
@@ -1172,6 +1178,7 @@ export function FoodModal({
               })}
             </div>
           )}
+        </div>
         </div>
 
         <div className="dialog-actions space-between">

@@ -62,8 +62,10 @@ export function FoodCard({
   const displayProtein = useCountUp(totals.protein)
   const subItems = item.subItems ?? []
   // Without sub-items the weight itself labels the portion, so it becomes the
-  // lone chip instead of being repeated in the meta row.
-  const weightAsSubItem = subItems.length === 0 && item.weight > 0
+  // lone chip instead of being repeated in the meta row. Rendered even at 0g:
+  // a chip is the card's only way into the sheet, and a card that had neither
+  // sub-items nor a weight had no way to reach its 份數 at all.
+  const weightAsSubItem = subItems.length === 0
 
   // A guest's qty change lives in an override, not on the record, so the chip
   // has to read the effective qty or it keeps showing the shared ×N. An
@@ -346,7 +348,14 @@ export function FoodCard({
         </div>
         {weightAsSubItem && (
           <div className="sub-items-summary">
-            <span className="sub-item-chip">{formatAmount(item.weight)} g</span>
+            <button
+              type="button"
+              className="sub-item-chip is-toggleable"
+              aria-label={`${item.name} 明細`}
+              onClick={handleChipClick}
+            >
+              {formatAmount(item.weight)} g
+            </button>
           </div>
         )}
         {subItems.length > 0 && (

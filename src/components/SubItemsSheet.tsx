@@ -72,6 +72,54 @@ export function SubItemsSheet({
         Number(getEffectiveIngredientQty(a, guestIngredientOverrides) > 0),
     )
 
+  // Selected rows float to the top (sortedRows above), so unchecking one
+  // teleports it to the bottom the instant it's tapped — and the finger is now
+  // over whatever moved up into its place. Replay the reshuffle as motion so
+  // the row can be followed, and so a second tap isn't aimed at a stale target.
+  const rowsContainerRef = useRef<HTMLDivElement>(null)
+  const prevRowRectsRef = useRef<Record<string, DOMRect> | null>(null)
+
+  const captureRowRects = () => {
+    const container = rowsContainerRef.current
+    if (!container) return
+    const rects: Record<string, DOMRect> = {}
+    container.querySelectorAll<HTMLElement>('[data-sub-row-id]').forEach((el) => {
+      const id = el.dataset.subRowId
+      if (id) rects[id] = el.getBoundingClientRect()
+    })
+    prevRowRectsRef.current = rects
+  }
+
+  useLayoutEffect(() => {
+    const rects = prevRowRectsRef.current
+    if (!rects) return
+    prevRowRectsRef.current = null
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const container = rowsContainerRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        Object.keys(rects).forEach((id) => {
+          const el = container.querySelector<HTMLElement>(`[data-sub-row-id="${CSS.escape(id)}"]`)
+          if (!el) return
+          const dy = rects[id].top - el.getBoundingClientRect().top
+          if (Math.abs(dy) < 0.5) return
+          el.style.transition = 'none'
+          el.style.transform = `translateY(${dy}px)`
+          requestAnimationFrame(() => {
+            el.style.transition = 'transform var(--motion-flip-bold)'
+            el.style.transform = ''
+            const handleEnd = () => {
+              el.style.transition = ''
+              el.removeEventListener('transitionend', handleEnd)
+            }
+            el.addEventListener('transitionend', handleEnd)
+          })
+        })
+      })
+    })
+  })
+
   // Mirrors the sub-item drag system in FoodModal: the grabbed row follows
   // the pointer with a spring lag, siblings FLIP-animate as the order changes
   // live, scoped to one sub-item's own ingredient list at a time.
@@ -264,7 +312,9 @@ export function SubItemsSheet({
         <div className="dialog-header">
           <div>
             <div className="dialog-title" id="sub-items-sheet-title">{title}</div>
-            <div className="sub-items-sheet-header-sub">已選 {selectedCount} 項</div>
+            {subItems.length > 0 && (
+              <div className="sub-items-sheet-header-sub">已選 {selectedCount} 項</div>
+            )}
           </div>
           <div className="sub-items-sheet-header-actions">
             <div className="sub-items-sheet-qty">
@@ -290,12 +340,19 @@ export function SubItemsSheet({
           </div>
         </div>
 
-        <div className="sub-items-sheet-quick-actions">
-          <button type="button" className="sub-items-sheet-pill" onClick={onSelectAll}>全選</button>
-          <button type="button" className="sub-items-sheet-pill" onClick={onClearAll}>清除</button>
-        </div>
+        {subItems.length > 0 && (
+          <div className="sub-items-sheet-quick-actions">
+            <button type="button" className="sub-items-sheet-pill" onClick={onSelectAll}>全選</button>
+            <button type="button" className="sub-items-sheet-pill" onClick={onClearAll}>清除</button>
+          </div>
+        )}
 
-        <div className="sub-items-sheet-list">
+        <div className="sub-items-sheet-list" ref={rowsContainerRef}>
+          {/* A card with no sub-items still opens here — this is where its 份數
+              lives, and the chip on the card is the only way in. */}
+          {subItems.length === 0 && (
+            <div className="sub-items-sheet-empty">這筆紀錄沒有子項目，可在上方調整份數</div>
+          )}
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
             const isLastSelected = selected && selectedCount <= 1
@@ -313,7 +370,11 @@ export function SubItemsSheet({
             const ingredients = getSortedIngredients(sub)
 
             return (
-              <div key={sub.id} className={`sub-items-sheet-row${selected ? '' : ' is-excluded'}`}>
+              <div
+                key={sub.id}
+                data-sub-row-id={sub.id}
+                className={`sub-items-sheet-row${selected ? '' : ' is-excluded'}`}
+              >
                 <div className="sub-items-sheet-row-top">
                   <button
                     type="button"
@@ -325,7 +386,10 @@ export function SubItemsSheet({
                     // especially right after 清除, which lands here by design.
                     title={isLastSelected ? '至少要保留一項' : undefined}
                     disabled={isLastSelected}
-                    onClick={() => onSetQty(sub.id, activeQty > 0 ? 0 : 1)}
+                    onClick={() => {
+                      captureRowRects()
+                      onSetQty(sub.id, activeQty > 0 ? 0 : 1)
+                    }}
                   >
                     {selected && <Check size={12} strokeWidth={3} />}
                   </button>
@@ -394,7 +458,12 @@ export function SubItemsSheet({
                               type="button"
                               className="sub-item-detail-ingredient-checkbox"
                               aria-label={ingSelected ? '取消計入加總' : '計入加總'}
-                              onClick={() => onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : 1)}
+                              onClick={() => {
+                                // Same reason as captureRowRects above — the
+                                // ingredient list re-sorts on this tap.
+                                captureIngredientRects(sub.id)
+                                onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : 1)
+                              }}
                             >
                               {ingSelected && <Check size={9} strokeWidth={3} />}
                             </button>

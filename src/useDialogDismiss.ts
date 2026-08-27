@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { MouseEvent, PointerEvent } from 'react'
 import { createDialogStack } from './dialogStack'
+import { lockPage, unlockPage } from './pageLock'
 
 // One stack shared by every useDialogDismiss instance (not by useFocusTrap's
 // — see dialogStack.ts for why each concern needs its own).
@@ -26,9 +27,13 @@ export function useDialogDismiss(onDismiss: () => void, active = true) {
     if (!active) return
     const id = dismissStack.push()
     dialogIdRef.current = id
+    // Every dialog in the app goes through this hook, so it's also the one
+    // place that can freeze and hide the page behind them — see pageLock.
+    lockPage()
     return () => {
       dismissStack.pop(id)
       dialogIdRef.current = null
+      unlockPage()
     }
   }, [active])
 
