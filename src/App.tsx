@@ -268,9 +268,17 @@ function FoodBook({
     const ranked = filteredItems.map((item) => ({ item, totals: getFoodTotals(item) }))
     ranked.sort((a, b) => {
       if (sortMode === 'calories') return (b.totals.calories - a.totals.calories) * dirSign
-      const effA = a.totals.calories > 0 ? a.totals.protein / a.totals.calories : 0
-      const effB = b.totals.calories > 0 ? b.totals.protein / b.totals.calories : 0
-      return (effB - effA) * dirSign
+      // protein per kcal. A zero-calorie item carrying protein is the most
+      // efficient thing on the list, not the least — it used to score 0 and
+      // sink to the bottom alongside genuinely empty records.
+      const efficiency = (t: { protein: number; calories: number }) =>
+        t.calories > 0 ? t.protein / t.calories : t.protein > 0 ? Infinity : 0
+      const effA = efficiency(a.totals)
+      const effB = efficiency(b.totals)
+      // Compared, not subtracted: two Infinities subtract to NaN, which makes
+      // the whole comparator incoherent and the sort order arbitrary.
+      if (effA === effB) return 0
+      return (effB > effA ? 1 : -1) * dirSign
     })
     return ranked.map(({ item }) => item)
   }, [filteredItems, sortMode, sortDir])
@@ -585,11 +593,31 @@ function FoodBook({
   // ring actually goes away with the selection.
   const clearSelection = () => {
     const active = document.activeElement as HTMLElement | null
-    if (active?.classList.contains('food-card')) active.blur()
+    if (active?.classList.contains('food-card-select')) active.blur()
     setSelectedIds(new Set())
   }
 
-  const selectAll = () => setSelectedIds(new Set(filteredItems.map((item) => item.id)))
+  // 全選 only ever selected what the search left on screen, but 取消全選 wiped
+  // the lot — search "雞", select the three matches, undo, and five unrelated
+  // cards selected earlier went with them. Both act on the visible set now;
+  // with no search active the two sets are the same thing. Esc stays the
+  // panic button that clears everything.
+  const selectAll = () =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      filteredItems.forEach((item) => next.add(item.id))
+      return next
+    })
+
+  const deselectVisible = () => {
+    const active = document.activeElement as HTMLElement | null
+    if (active?.classList.contains('food-card-select')) active.blur()
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      filteredItems.forEach((item) => next.delete(item.id))
+      return next
+    })
+  }
 
   // Touch has no ⌘A, so the sort bar carries the 全選 pill. It acts on what's
   // on screen (filteredItems — the search's result set), and flips to 取消全選
@@ -660,7 +688,7 @@ function FoodBook({
       }
       e.preventDefault()
       if (isSelectAll) selectAll()
-      else clearSelection()
+      else deselectVisible()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -965,6 +993,13 @@ function FoodBook({
 
   const hasAnyItems = items.length > 0
   const hasResults = filteredItems.length > 0
+  // The bar totals everything selected, including cards the search has hidden.
+  // Unexplained, that just reads as the sum being wrong.
+  const hiddenSelectedCount = useMemo(() => {
+    if (search.trim().length === 0) return 0
+    const visible = new Set(filteredItems.map((item) => item.id))
+    return selectedItems.filter((item) => !visible.has(item.id)).length
+  }, [search, filteredItems, selectedItems])
 
   return (
     <>
@@ -973,7 +1008,11 @@ function FoodBook({
           <header className="page-topbar">
             <div className="title-row">
               <h1>Foodbook</h1>
-              <span className="item-count">{items.length} 筆</span>
+              <span className="item-count">
+                {filteredItems.length === items.length
+                  ? `${items.length} 筆`
+                  : `${filteredItems.length} / ${items.length} 筆`}
+              </span>
             </div>
 
             <div className="search-bar">
@@ -1064,11 +1103,18 @@ function FoodBook({
             </div>
           </header>
 
+          {hiddenSelectedCount > 0 && (
+            <div className="filtered-selection-hint">
+              另有 {hiddenSelectedCount} 項已選，不在搜尋結果中（仍計入下方加總）
+            </div>
+          )}
+
           {hasAnyItems && (
             <div className="sort-bar">
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'manual' ? ' is-active' : ''}`}
+                title="自訂順序，長按卡片可拖曳排序"
                 onClick={() => handleSortPillClick('manual')}
               >
                 預設
@@ -1076,6 +1122,7 @@ function FoodBook({
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'calories' ? ' is-active' : ''}`}
+                title="依總熱量排序，再按一次可反向"
                 onClick={() => handleSortPillClick('calories')}
               >
                 熱量{sortMode === 'calories' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
@@ -1083,6 +1130,7 @@ function FoodBook({
               <button
                 type="button"
                 className={`sort-pill${sortMode === 'protein' ? ' is-active' : ''}`}
+                title="每大卡的蛋白質，越高越前面；再按一次可反向"
                 onClick={() => handleSortPillClick('protein')}
               >
                 蛋白質效率{sortMode === 'protein' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
@@ -1091,7 +1139,7 @@ function FoodBook({
                 type="button"
                 className={`sort-pill sort-select-all${allSelected ? ' is-active' : ''}`}
                 aria-pressed={allSelected}
-                onClick={() => (allSelected ? clearSelection() : selectAll())}
+                onClick={() => (allSelected ? deselectVisible() : selectAll())}
               >
                 {allSelected ? '取消全選' : '全選'}
               </button>

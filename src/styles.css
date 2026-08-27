@@ -10,8 +10,13 @@
   --bg-soft: #ebebf0;
   --ink: #1d1d1f;
   --ink-2: #3a3a3c;
-  --ink-3: #6e6e73;
-  --ink-4: #8e8e93;
+  /* Every 10-11px label in the app is drawn in --ink-4, and at #8e8e93 it was
+     3.26:1 on white — below AA for text this size, and worse (3.80:1) on the
+     --bg-soft fields it also lands on. #68686d clears 4.5:1 against both;
+     --ink-3 moves with it to keep the two steps apart. The dark theme's own
+     values already pass on #1a1a1a and are left alone. */
+  --ink-3: #5a5a60;
+  --ink-4: #68686d;
   --rule: rgba(60, 60, 67, .1);
   --rule-strong: rgba(60, 60, 67, .2);
   --accent: #ec5122;
@@ -717,10 +722,17 @@ html, body, #root { height: var(--app-height); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: background 120ms var(--ease-press);
 }
+/* Excluded reads the same in all five places it appears — card chip, sheet
+   row, sheet ingredient, edit-form sub-item, edit-form ingredient: muted and
+   struck through. It used to be a different treatment in each (outline here,
+   grey text there, opacity .55 elsewhere, and nothing at all on the edit
+   form's ingredient rows), and at 11px a grey-on-grey chip was near enough
+   invisible. The ☐ in the copied text says the same thing. */
 .food-card .sub-item-chip.is-excluded {
   color: var(--ink-4);
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--off-ring);
+  text-decoration: line-through;
 }
 .food-card .sub-item-chip.is-toggleable {
   cursor: pointer;
@@ -786,6 +798,7 @@ html, body, #root { height: var(--app-height); }
 .sub-items-sheet-row.is-excluded .sub-item-detail-ingredient-stats {
   color: var(--ink-4);
 }
+.sub-items-sheet-row.is-excluded .sub-items-sheet-row-name { text-decoration: line-through; }
 .sub-items-sheet-ingredients {
   display: flex; flex-direction: column; gap: 8px;
   padding-left: var(--space-2);
@@ -816,12 +829,12 @@ html, body, #root { height: var(--app-height); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sub-item-detail-ingredient-stats { font-size: 11px; color: var(--ink-4); text-align: right; }
-.sub-item-detail-ingredient-row.is-excluded {
-  opacity: 0.55;
-}
 .sub-item-detail-ingredient-row.is-excluded .sub-item-detail-ingredient-name,
 .sub-item-detail-ingredient-row.is-excluded .sub-item-detail-ingredient-stats {
   color: var(--ink-4);
+}
+.sub-item-detail-ingredient-row.is-excluded .sub-item-detail-ingredient-name {
+  text-decoration: line-through;
 }
 .ingredient-qty-stepper {
   flex: none; display: flex; align-items: center; gap: 1px;
@@ -1143,14 +1156,6 @@ html, body, #root { height: var(--app-height); }
 }
 .sub-item-row.is-dragging { position: relative; cursor: grabbing; opacity: 1; }
 .sub-item-row-top { display: flex; gap: 8px; align-items: center; cursor: pointer; }
-/* Wraps the raw checkbox so its clickable/tappable area matches its 30px
-   siblings (grip, remove) instead of the checkbox's own tiny native box —
-   a native <label> click target extends over the whole wrapper for free. */
-.checkbox-tap-area {
-  flex: none; width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-}
 .sub-item-row-summary { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 /* An <input> that reads as the row's title until you focus it — no box, no
    padding, so the collapsed row looks the same as it did when this was text.
@@ -1166,7 +1171,11 @@ html, body, #root { height: var(--app-height); }
 }
 .sub-item-row-name::placeholder { color: var(--ink-4); font-weight: 400; }
 .sub-item-row-name:focus { outline: none; box-shadow: inset 0 -1px 0 0 var(--accent); }
-.sub-item-row.is-excluded .sub-item-row-name { color: var(--ink-4); }
+.sub-item-row.is-excluded .sub-item-row-name { color: var(--ink-4); text-decoration: line-through; }
+/* The edit form's ingredient rows had no excluded styling at all — an
+   unchecked ingredient looked exactly like a counted one. */
+.ingredient-row.is-excluded .input { color: var(--ink-4); text-decoration: line-through; }
+.ingredient-row.is-excluded .input-unit { color: var(--ink-4); }
 .sub-item-row-collapsed-stats { font-size: 11px; color: var(--ink-4); }
 .sub-item-qty-badge {
   flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
@@ -1177,7 +1186,6 @@ html, body, #root { height: var(--app-height); }
 }
 .sub-item-row-top[aria-expanded="true"] .sub-item-chevron { transform: rotate(180deg); }
 .sub-item-row-expanded { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.sub-item-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
 .sub-item-grip {
   position: relative;
   flex: none; width: 20px; height: 30px; padding: 0;
@@ -1366,34 +1374,30 @@ html, body, #root { height: var(--app-height); }
 .sub-items-sheet-footer-label { font-size: 10px; color: var(--ink-4); margin-top: 1px; }
 .sub-items-sheet-done { min-width: 88px; }
 
-.sub-items-sheet-checkbox {
+/* — "計入加總", one control — the same act wore four different costumes: a
+   native <input type=checkbox> in the edit form, a 22px round button in the
+   sheet, a 16px one on its ingredients, and a badge on the card. The three
+   inside dialogs are now one class with a size modifier. */
+.fb-check {
   position: relative;
   flex: none; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
   background: var(--bg-card); box-shadow: inset 0 0 0 1.5px var(--rule-strong); color: #fff;
+  transition: background 120ms var(--ease-press);
 }
-.sub-items-sheet-row:not(.is-excluded) .sub-items-sheet-checkbox {
+.fb-check.is-on {
   background: var(--accent-strong); box-shadow: none;
   animation: lo-pop var(--dur-pop) var(--ease-pop);
 }
-.sub-items-sheet-checkbox:disabled { cursor: default; opacity: .5; }
+.fb-check:disabled { cursor: default; opacity: .5; }
+.fb-check:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* 22px visible, 36×36 tappable. */
-.sub-items-sheet-checkbox::before { content: ''; position: absolute; inset: -7px; }
-
-.sub-item-detail-ingredient-checkbox {
-  position: relative;
-  flex: none; width: 16px; height: 16px; padding: 0; border: none; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  background: var(--bg-soft); box-shadow: inset 0 0 0 1.5px var(--rule-strong); color: #fff;
-}
-.sub-item-detail-ingredient-row:not(.is-excluded) .sub-item-detail-ingredient-checkbox {
-  background: var(--accent-strong); box-shadow: none;
-  animation: lo-pop var(--dur-pop) var(--ease-pop);
-}
-/* 16px visible, 32×32 tappable. The grip to its left gives up the 4px they
-   overlap — a mis-tap there toggles instead of starting a drag, which is the
-   cheaper of the two mistakes. */
-.sub-item-detail-ingredient-checkbox::before { content: ''; position: absolute; inset: -8px; }
+.fb-check::before { content: ''; position: absolute; inset: -7px; }
+/* Nested one step down, so a step down in size — 16px visible, 32×32
+   tappable. The grip to its left gives up the 4px they overlap: a mis-tap
+   there toggles instead of starting a drag, the cheaper of the two mistakes. */
+.fb-check.is-sm { width: 16px; height: 16px; background: var(--bg-soft); }
+.fb-check.is-sm::before { inset: -8px; }
 
 /* Desktop: the chip sheet reads as a normal centered dialog instead of a
    bottom-anchored sheet — the slide-from-edge affordance is a phone/touch
@@ -1540,3 +1544,31 @@ html.has-dialog .page-scroll { overflow: hidden; }
 }
 .toast-close:hover { background: var(--glass-btn); color: var(--ink); }
 .toast-close::before { content: ''; position: absolute; inset: -4px; }
+
+/* The card's keyboard/assistive identity. Painted under the photo and body —
+   pointer taps land on those and bubble to the card's own onClick, exactly as
+   before — but it is a real focusable button, which is what the card as a
+   whole no longer pretends to be (see FoodCard.tsx). */
+.food-card-select {
+  position: absolute; inset: 0; z-index: 0;
+  padding: 0; border: none; background: transparent;
+  -webkit-appearance: none; appearance: none;
+}
+/* Its own outline would be drawn beneath the content, so the ring goes on the
+   card. Distinct from .is-selected's ring: unfilled, and offset outward. */
+.food-card:has(.food-card-select:focus-visible) {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* The selection bar totals every selected card, search-hidden ones included.
+   Without this the sum just looks wrong. */
+.filtered-selection-hint {
+  margin-top: 10px; padding: 0 4px;
+  font-size: 12px; color: var(--ink-3);
+}
+
+/* Announced, not drawn. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}

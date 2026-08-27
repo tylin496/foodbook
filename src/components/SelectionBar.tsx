@@ -105,6 +105,13 @@ export function SelectionBar({
 
   return (
     <div className={`selection-bar${visible ? '' : ' is-leaving'}`}>
+      {/* Announced from the settled totals, not the tweened ones — wiring a
+          live region to useCountUp's output would fire it once per frame. */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {visible
+          ? `已選 ${count} 項，共 ${Math.round(totalCalories)} 大卡，蛋白質 ${Math.round(totalProtein)} 公克`
+          : ''}
+      </div>
       <div className="selection-bar-name">
         <span className="selection-bar-item">{shown.itemName}</span>
         {others > 0 && <span className="selection-bar-more">＋{others} 項</span>}

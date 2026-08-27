@@ -6,6 +6,7 @@ import { useDialogDismiss } from '../useDialogDismiss'
 import { useFocusTrap } from '../useFocusTrap'
 import type { ConfirmOptions } from '../useConfirm'
 import { formatAmount, generateId, roundAmount, toNumber } from '../utils'
+import { createEdgeAutoScroll } from '../autoScroll'
 
 interface FoodModalProps {
   draft: FoodDraft
@@ -31,6 +32,15 @@ export function FoodModal({
   confirm,
 }: FoodModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // The dialog's own scrolling middle — what both drag systems nudge at the
+  // edges. Only one grip can be held at a time, so they share one scroller.
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const reorderTickRef = useRef<() => void>(() => {})
+  const autoScrollRef = useRef<ReturnType<typeof createEdgeAutoScroll> | null>(null)
+  if (autoScrollRef.current === null) {
+    autoScrollRef.current = createEdgeAutoScroll(() => reorderTickRef.current())
+  }
+  const autoScroll = autoScrollRef.current
   const [preview, setPreview] = useState<string | null>(draft.imageUrl)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
@@ -381,6 +391,7 @@ export function FoodModal({
 
   const handleSubItemGripDown = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
     e.preventDefault()
+    reorderTickRef.current = () => applySubItemReorder()
     const el = findSubItemRowEl(id)
     if (!el) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -401,10 +412,12 @@ export function FoodModal({
     }, 140)
   }
 
-  const handleSubItemGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+  const lastPointerXRef = useRef(0)
+
+  const applySubItemReorder = () => {
     const dragging = dragMetaRef.current
     if (!dragging || !subItemsRef.current) return
-    lastPointerYRef.current = e.clientY
+    const e = { clientX: lastPointerXRef.current, clientY: lastPointerYRef.current }
 
     // Dragging over another (expanded) sub-item's ingredients zone previews a
     // convert-to-ingredient drop instead of reordering the sub-items list.
@@ -441,9 +454,18 @@ export function FoodModal({
     }
   }
 
+  const handleSubItemGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragMetaRef.current) return
+    lastPointerXRef.current = e.clientX
+    lastPointerYRef.current = e.clientY
+    autoScroll.update(scrollerRef.current, e.clientY)
+    applySubItemReorder()
+  }
+
   const handleSubItemGripUp = () => {
     const meta = dragMetaRef.current
     stopSubItemSpringLoop()
+    autoScroll.stop()
     if (meta) {
       const el = findSubItemRowEl(meta.id)
       if (el) {
@@ -465,7 +487,11 @@ export function FoodModal({
   }
 
   useEffect(() => {
-    return () => stopSubItemSpringLoop()
+    return () => {
+      stopSubItemSpringLoop()
+      autoScroll.stop()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Mirrors the sub-item drag system above, scoped to one sub-item's own
@@ -574,6 +600,7 @@ export function FoodModal({
 
   const handleIngredientGripDown = (e: React.PointerEvent<HTMLButtonElement>, subId: string, id: string) => {
     e.preventDefault()
+    reorderTickRef.current = () => applyIngredientReorder()
     const el = findIngredientRowEl(subId, id)
     if (!el) return
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -594,11 +621,13 @@ export function FoodModal({
     }, 140)
   }
 
-  const handleIngredientGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+  const lastIngredientPointerXRef = useRef(0)
+
+  const applyIngredientReorder = () => {
     const dragging = ingredientDragMetaRef.current
     const container = dragging ? ingredientContainersRef.current.get(dragging.subId) : null
     if (!dragging || !container) return
-    lastIngredientPointerYRef.current = e.clientY
+    const e = { clientX: lastIngredientPointerXRef.current, clientY: lastIngredientPointerYRef.current }
 
     // Dragging out of every ingredients zone and over the sub-items list
     // previews a convert-to-sub-item drop instead of reordering ingredients.
@@ -635,9 +664,18 @@ export function FoodModal({
     }
   }
 
+  const handleIngredientGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!ingredientDragMetaRef.current) return
+    lastIngredientPointerXRef.current = e.clientX
+    lastIngredientPointerYRef.current = e.clientY
+    autoScroll.update(scrollerRef.current, e.clientY)
+    applyIngredientReorder()
+  }
+
   const handleIngredientGripUp = () => {
     const meta = ingredientDragMetaRef.current
     stopIngredientSpringLoop()
+    autoScroll.stop()
     if (meta) {
       const el = findIngredientRowEl(meta.subId, meta.id)
       if (el) {
@@ -660,6 +698,7 @@ export function FoodModal({
 
   useEffect(() => {
     return () => stopIngredientSpringLoop()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Cross-zone conversion: a sub-item's grip dropped onto another sub-item's
@@ -803,7 +842,7 @@ export function FoodModal({
           </button>
         </div>
 
-        <div className="food-modal-body">
+        <div className="food-modal-body" ref={scrollerRef}>
         <div className="food-modal-photo-row" onClick={() => fileInputRef.current?.click()}>
           <div className="food-modal-photo">
             {preview ? <img src={preview} alt="食物照片預覽" /> : <Camera size={22} strokeWidth={1.8} />}
@@ -932,15 +971,19 @@ export function FoodModal({
                       >
                         <GripVertical size={14} />
                       </button>
-                      <label className="checkbox-tap-area" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          className="sub-item-checkbox"
-                          aria-label={sub.selected ? '取消計入加總' : '計入加總'}
-                          checked={sub.selected}
-                          onChange={(e) => selectSubItem(sub.id, e.target.checked)}
-                        />
-                      </label>
+                      <button
+                        type="button"
+                        className={`fb-check${sub.selected ? ' is-on' : ''}`}
+                        aria-pressed={sub.selected}
+                        aria-label={sub.selected ? '取消計入加總' : '計入加總'}
+                        onClick={(e) => {
+                          // The row header itself toggles the accordion.
+                          e.stopPropagation()
+                          selectSubItem(sub.id, !sub.selected)
+                        }}
+                      >
+                        {sub.selected && <Check size={12} strokeWidth={3} />}
+                      </button>
                       <div className="sub-item-row-summary">
                         {/* The name is edited in place here rather than repeated as a
                             separate field below — one title, always in the same spot. */}
@@ -1080,15 +1123,15 @@ export function FoodModal({
                                 >
                                   <GripVertical size={12} />
                                 </button>
-                                <label className="checkbox-tap-area">
-                                  <input
-                                    type="checkbox"
-                                    className="sub-item-checkbox"
-                                    aria-label={ing.selected ? '取消計入加總' : '計入加總'}
-                                    checked={ing.selected}
-                                    onChange={(e) => selectIngredient(sub.id, ing.id, e.target.checked)}
-                                  />
-                                </label>
+                                <button
+                                  type="button"
+                                  className={`fb-check is-sm${ing.selected ? ' is-on' : ''}`}
+                                  aria-pressed={ing.selected}
+                                  aria-label={ing.selected ? '取消計入加總' : '計入加總'}
+                                  onClick={() => selectIngredient(sub.id, ing.id, !ing.selected)}
+                                >
+                                  {ing.selected && <Check size={9} strokeWidth={3} />}
+                                </button>
                                 <input
                                   className="input"
                                   value={ing.name}

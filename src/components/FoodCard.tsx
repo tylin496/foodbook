@@ -232,9 +232,14 @@ export function FoodCard({
   }
 
   return (
+    // Not role="button" any more: the card contains real controls (edit, the
+    // chips, the calculator badge), and interactive content nested inside a
+    // role="button" is invalid and unreachable — a screen reader had no way to
+    // open the sheet or the calculator at all. The card is a plain container
+    // whose whole surface still toggles on click (mouse and touch are
+    // unchanged); the toggle's keyboard and assistive-tech identity lives in a
+    // real button underneath, painted over by the content but focusable.
     <div
-      role="button"
-      tabIndex={0}
       data-food-id={item.id}
       className={`food-card${selected ? ' is-selected' : ''}${dragging ? ' is-dragging' : ''}${removing ? ' is-removing' : ''}`}
       onClick={() => {
@@ -244,14 +249,18 @@ export function FoodCard({
         }
         onToggle(item.id)
       }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onToggle(item.id)
-        }
-      }}
-      aria-pressed={selected}
     >
+      <button
+        type="button"
+        className="food-card-select"
+        aria-pressed={selected}
+        aria-label={`${formatSubItemName({ ...item, qty: baseQty })}，${formatAmount(totals.calories)} 大卡，蛋白質 ${formatAmount(totals.protein)} 公克`}
+        onClick={(e) => {
+          // The card's own onClick would otherwise toggle a second time.
+          e.stopPropagation()
+          onToggle(item.id)
+        }}
+      />
       <div
         ref={photoRef}
         className={`photo${holding ? ' is-holding' : ''}${reorderEnabled ? ' is-draggable' : ''}`}
@@ -301,9 +310,11 @@ export function FoodCard({
         <div className="food-name-line">
           <div className="food-name">{formatSubItemName({ ...item, qty: baseQty })}</div>
           {isCalculatorLink && (
-            <span
+            <button
+              type="button"
               className="calculator-badge"
               title="點擊開啟計算機"
+              aria-label={`開啟 ${item.name} 計算機`}
               onClick={(e) => {
                 e.stopPropagation()
                 onOpenCalculator?.()
@@ -311,7 +322,7 @@ export function FoodCard({
             >
               <Calculator size={11} strokeWidth={2.3} />
               計算機
-            </span>
+            </button>
           )}
         </div>
         {weightAsSubItem && (
@@ -329,18 +340,25 @@ export function FoodCard({
         {subItems.length > 0 && (
           <div className="sub-items-summary" ref={chipsRef} style={{ position: 'relative' }}>
             {subItems.slice(0, visibleChipCount).map((sub) => (
-              <span
+              <button
+                type="button"
                 key={sub.id}
                 className={`sub-item-chip${isSubItemSelected(sub, guestOverrides) ? '' : ' is-excluded'} is-toggleable`}
+                aria-label={`${item.name} 明細：${chipLabel(sub)}`}
                 onClick={handleChipClick}
               >
                 {chipLabel(sub)}
-              </span>
+              </button>
             ))}
             {subItems.length > visibleChipCount && (
-              <span className="sub-item-chip is-more" onClick={handleChipClick}>
+              <button
+                type="button"
+                className="sub-item-chip is-more"
+                aria-label={`還有 ${subItems.length - visibleChipCount} 項，開啟明細`}
+                onClick={handleChipClick}
+              >
                 +{subItems.length - visibleChipCount}
-              </span>
+              </button>
             )}
             <div
               ref={chipMeasureRef}

@@ -5,6 +5,7 @@ import type { FoodSubItem, IngredientOverrides, SubItemOverrides } from '../type
 import { getEffectiveIngredientQty, getEffectiveSubItemQty, getSubItemTotals } from '../types'
 import { formatAmount, formatSubItemName } from '../utils'
 import { useCountUp } from '../useCountUp'
+import { createEdgeAutoScroll } from '../autoScroll'
 import { useDialogDismiss } from '../useDialogDismiss'
 import { useFocusTrap } from '../useFocusTrap'
 
@@ -77,6 +78,9 @@ export function SubItemsSheet({
   // over whatever moved up into its place. Replay the reshuffle as motion so
   // the row can be followed, and so a second tap isn't aimed at a stale target.
   const rowsContainerRef = useRef<HTMLDivElement>(null)
+  // Same element as rowsContainerRef, named for the other job it does: it is
+  // the sheet's scroller, and what an ingredient drag nudges at the edges.
+  const listRef = rowsContainerRef
   const prevRowRectsRef = useRef<Record<string, DOMRect> | null>(null)
 
   const captureRowRects = () => {
@@ -245,11 +249,13 @@ export function SubItemsSheet({
     }, 140)
   }
 
-  const handleIngredientGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+  // Split out so the auto-scroll loop can re-run it: the list moves under a
+  // held-still pointer, so the row it's over keeps changing silently.
+  const applyIngredientReorder = () => {
     const dragging = ingredientDragMetaRef.current
     const container = dragging ? ingredientContainersRef.current.get(dragging.subId) : null
     if (!dragging || !container) return
-    lastIngredientPointerYRef.current = e.clientY
+    const clientY = lastIngredientPointerYRef.current
     const sub = subItems.find((s) => s.id === dragging.subId)
     if (!sub) return
     const currentOrder = getSortedIngredients(sub)
@@ -260,7 +266,7 @@ export function SubItemsSheet({
       if (i === draggedIndex) continue
       const rect = rows[i].getBoundingClientRect()
       const mid = rect.top + rect.height / 2
-      const crossed = (i < draggedIndex && e.clientY < mid) || (i > draggedIndex && e.clientY > mid)
+      const crossed = (i < draggedIndex && clientY < mid) || (i > draggedIndex && clientY > mid)
       if (crossed) {
         captureIngredientRects(dragging.subId, dragging.id)
         const next = [...currentOrder]
@@ -275,9 +281,25 @@ export function SubItemsSheet({
     }
   }
 
+  const applyIngredientReorderRef = useRef(applyIngredientReorder)
+  applyIngredientReorderRef.current = applyIngredientReorder
+  const autoScrollRef = useRef<ReturnType<typeof createEdgeAutoScroll> | null>(null)
+  if (autoScrollRef.current === null) {
+    autoScrollRef.current = createEdgeAutoScroll(() => applyIngredientReorderRef.current())
+  }
+  const autoScroll = autoScrollRef.current
+
+  const handleIngredientGripMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!ingredientDragMetaRef.current) return
+    lastIngredientPointerYRef.current = e.clientY
+    autoScroll.update(listRef.current, e.clientY)
+    applyIngredientReorder()
+  }
+
   const handleIngredientGripUp = () => {
     const meta = ingredientDragMetaRef.current
     stopIngredientSpringLoop()
+    autoScroll.stop()
     if (meta) {
       const el = findIngredientRowEl(meta.subId, meta.id)
       if (el) {
@@ -295,7 +317,11 @@ export function SubItemsSheet({
   }
 
   useEffect(() => {
-    return () => stopIngredientSpringLoop()
+    return () => {
+      stopIngredientSpringLoop()
+      autoScroll.stop()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return createPortal(
@@ -378,7 +404,8 @@ export function SubItemsSheet({
                 <div className="sub-items-sheet-row-top">
                   <button
                     type="button"
-                    className="sub-items-sheet-checkbox"
+                    className={`fb-check${selected ? ' is-on' : ''}`}
+                    aria-pressed={selected}
                     aria-label={
                       isLastSelected ? '至少要保留一項' : selected ? '取消計入加總' : '計入加總'
                     }
@@ -456,7 +483,8 @@ export function SubItemsSheet({
                             )}
                             <button
                               type="button"
-                              className="sub-item-detail-ingredient-checkbox"
+                              className={`fb-check is-sm${ingSelected ? ' is-on' : ''}`}
+                              aria-pressed={ingSelected}
                               aria-label={ingSelected ? '取消計入加總' : '計入加總'}
                               onClick={() => {
                                 // Same reason as captureRowRects above — the
