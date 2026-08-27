@@ -1179,8 +1179,12 @@ html, body, #root { height: var(--app-height); }
 .sub-item-row.is-excluded .sub-item-row-name { color: var(--ink-4); text-decoration: line-through; }
 /* The edit form's ingredient rows had no excluded styling at all — an
    unchecked ingredient looked exactly like a counted one. */
-.ingredient-row.is-excluded .input { color: var(--ink-4); text-decoration: line-through; }
+.ingredient-row.is-excluded .input { color: var(--ink-4); }
 .ingredient-row.is-excluded .input-unit { color: var(--ink-4); }
+/* Only the name is struck. Striking the number fields too read as "these
+   values are wrong" rather than "this row isn't counted", and they stay
+   editable while excluded. */
+.ingredient-row.is-excluded .ingredient-row-top > .input { text-decoration: line-through; }
 .sub-item-row-collapsed-stats { font-size: 11px; color: var(--ink-4); }
 .sub-item-qty-badge {
   flex: none; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3);
@@ -1533,7 +1537,15 @@ html.has-dialog .page-scroll { overflow: hidden; }
     inset 0 0 0 .5px var(--glass-edge),
     0 8px 28px -8px var(--glass-shadow),
     0 0 0 .5px var(--glass-edge);
-  animation: glass-in var(--dur-enter) var(--ease-enter);
+  animation: toast-in var(--dur-enter) var(--ease-enter);
+}
+/* Not glass-in: those keyframes carry the selection bar's own translateX(-50%),
+   and the toast is already centred by its stack — borrowing them slid every
+   toast half its own width to the left for the whole entrance, then snapped it
+   back when the animation dropped off. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
 }
 .toast-message {
   flex: 1; min-width: 0;

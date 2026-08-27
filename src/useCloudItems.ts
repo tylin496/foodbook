@@ -94,16 +94,22 @@ export function useCloudItems(uid: string) {
         setItemsState((prev) => {
           const resolved = typeof next === 'function' ? (next as (prev: FoodItem[]) => FoodItem[])(prev) : next
           writeLocalCache(resolved)
-          writeQueueRef.current = writeQueueRef.current.then(() =>
-            setDoc(itemsDocRef(uid), { items: resolved }).then(
+          // The settle handlers go on the *outer* link, so this promise always
+          // fulfills. Chained inside, a setDoc that threw synchronously (rather
+          // than returning a rejected promise — invalid field values do this)
+          // rejected the queue itself, and every `.then` after it skipped its
+          // callback: no write was attempted and no caller ever settled, for
+          // the rest of the session.
+          writeQueueRef.current = writeQueueRef.current
+            .then(() => setDoc(itemsDocRef(uid), { items: resolved }))
+            .then(
               () => resolve({ ok: true }),
               (err) => {
                 // Offline writes queue locally and resync once reconnected —
                 // that's still a success. Anything else is a real failure.
                 resolve({ ok: err?.code === 'unavailable' })
               },
-            ),
-          )
+            )
           return resolved
         })
       })

@@ -985,6 +985,7 @@ export function FoodModal({
           type="button"
           className="calculator-toggle"
           aria-pressed={draft.calculator}
+          aria-label="連結 Subway 計算機"
           onClick={() => onChange({ ...draft, calculator: !draft.calculator })}
         >
           <Calculator size={14} strokeWidth={2.2} />
