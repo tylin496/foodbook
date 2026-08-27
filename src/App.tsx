@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Image as ImageIcon, Plus, Search, X } from 'lucide-react'
+import { Image as ImageIcon, Monitor, Moon, Plus, Search, Sun, X } from 'lucide-react'
 import { useAuth } from './useAuth'
-import { useTheme } from './useTheme'
+import { useTheme, THEME_ORDER } from './useTheme'
 import { useCloudItems } from './useCloudItems'
 import { useGuestOverrides } from './useGuestOverrides'
 import type { FoodDraft } from './types'
@@ -20,7 +20,9 @@ import { Toasts } from './components/Toasts'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
-// Launches the embedded calculator instead of toggling into the selection total.
+// Legacy fallback only: the link now lives on the record (FoodItem.calculator),
+// so a card that has been saved once since keeps its calculator through a
+// rename. Records written before that still match on the literal name.
 const SUBWAY_ITEM_NAME = 'Subway'
 const SUBWAY_CLOSE_MS = 220
 // Trusted regardless of where Foodbook itself is served from (dev vs. prod) —
@@ -28,6 +30,11 @@ const SUBWAY_CLOSE_MS = 220
 const SUBWAY_ORIGIN = new URL(SUBWAY_CALCULATOR_URL).origin
 
 type SubwayResult = { hasSelection: boolean; mainName?: string; kcal?: number; protein?: number }
+
+function isCalculatorItem(item: { name: string; calculator?: 'subway' | null }): boolean {
+  if (item.calculator === null) return false
+  return item.calculator === 'subway' || item.name === SUBWAY_ITEM_NAME
+}
 type SortMode = 'manual' | 'calories' | 'protein'
 const SORT_MODE_KEY = 'food-diary:sort-mode'
 const SORT_DIR_KEY = 'food-diary:sort-dir'
@@ -78,6 +85,7 @@ function FoodBook({
     ingredientOverrides: guestIngredientOverrides,
     setQty: setGuestSubItemQty,
     setIngredientQty: setGuestIngredientQty,
+    prune: pruneGuestOverrides,
   } = useGuestOverrides()
   const { confirm, confirmDialogProps } = useConfirm()
   const { toasts, toast, dismiss: dismissToast } = useToasts()
@@ -94,7 +102,11 @@ function FoodBook({
     },
     [setItems, toast],
   )
-  useTheme(embedContext?.theme ?? null)
+  const { preference: themePreference, setPreference: setThemePreference } = useTheme(
+    embedContext?.theme ?? null,
+  )
+  const themeLabel = { system: '跟隨系統', light: '淺色', dark: '深色' } as const
+  const ThemeIcon = { system: Monitor, light: Sun, dark: Moon }[themePreference]
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -110,10 +122,11 @@ function FoodBook({
   const [subwayOpen, setSubwayOpen] = useState(false)
   const [subwayClosing, setSubwayClosing] = useState(false)
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSubwayMounted(true), 1500)
-    return () => window.clearTimeout(timer)
-  }, [])
+  // Was a blind 1.5s timer: every visitor loaded a third-party page in a
+  // hidden iframe whether or not they would ever open it. Warmed on intent
+  // instead — hovering or pressing the badge — which is early enough that the
+  // tap still feels instant, and never happens for someone who stays away.
+  const warmSubway = useCallback(() => setSubwayMounted(true), [])
 
   // The calculator posts its current build on every change; we just keep the
   // latest one and apply it when the user backs out, rather than writing to
@@ -142,7 +155,7 @@ function FoodBook({
   // added to their local running total (they can't write the shared record).
   const applySubwayResult = (result: SubwayResult) => {
     if (!result.hasSelection || !result.mainName) return
-    const subwayItem = items.find((item) => item.name === SUBWAY_ITEM_NAME)
+    const subwayItem = items.find(isCalculatorItem)
     if (!subwayItem) return
     if (isOwner) {
       const subId = subwayItem.subItems?.[0]?.id ?? generateId()
@@ -177,7 +190,7 @@ function FoodBook({
   const displayItems = useMemo(() => {
     if (isOwner || !guestSubwayItem) return items
     return items.map((item) =>
-      item.name === SUBWAY_ITEM_NAME
+      isCalculatorItem(item)
         ? {
             ...item,
             subItems: [
@@ -207,6 +220,13 @@ function FoodBook({
       setSubwayClosing(false)
     }, SUBWAY_CLOSE_MS)
   }
+
+  // Only once there is something to prune against — an empty list during the
+  // first snapshot would wipe every override the guest has.
+  useEffect(() => {
+    if (isOwner || itemsLoading || items.length === 0) return
+    pruneGuestOverrides(new Set(items.map((item) => item.id)))
+  }, [isOwner, itemsLoading, items, pruneGuestOverrides])
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -753,6 +773,8 @@ function FoodBook({
     setDraft({
       name: item.name,
       imageUrl: item.imageUrl,
+      qty: String(item.qty ?? 1),
+      calculator: isCalculatorItem(item),
       weight: shouldSplitBase ? '0' : String(item.weight),
       protein: shouldSplitBase ? '0' : String(item.protein),
       calories: shouldSplitBase ? '0' : String(item.calories),
@@ -923,6 +945,8 @@ function FoodBook({
                   ...item,
                   name: draft.name.trim(),
                   imageUrl: draft.imageUrl,
+                  qty: Math.max(1, toNumber(draft.qty) || 1),
+                  calculator: draft.calculator ? ('subway' as const) : null,
                   weight: toNumber(draft.weight),
                   protein: toNumber(draft.protein),
                   calories: toNumber(draft.calories),
@@ -936,6 +960,8 @@ function FoodBook({
             id: activeId ?? generateId(),
             name: draft.name.trim(),
             imageUrl: draft.imageUrl,
+            qty: Math.max(1, toNumber(draft.qty) || 1),
+            calculator: draft.calculator ? ('subway' as const) : null,
             weight: toNumber(draft.weight),
             protein: toNumber(draft.protein),
             calories: toNumber(draft.calories),
@@ -1050,6 +1076,24 @@ function FoodBook({
             </div>
 
             <div className="topbar-actions">
+              {/* The theme followed the OS and only the OS, with no way to pin
+                  it. Cycles 跟隨系統 → 淺色 → 深色. Hidden inside the LiftOS
+                  frame, where the host owns the theme. */}
+              {!embedContext && (
+                <button
+                  type="button"
+                  className="theme-btn"
+                  title={`外觀：${themeLabel[themePreference]}`}
+                  aria-label={`外觀：${themeLabel[themePreference]}，點擊切換`}
+                  onClick={() =>
+                    setThemePreference(
+                      THEME_ORDER[(THEME_ORDER.indexOf(themePreference) + 1) % THEME_ORDER.length],
+                    )
+                  }
+                >
+                  <ThemeIcon size={15} strokeWidth={2.2} />
+                </button>
+              )}
               {isOwner ? (
                 <>
                   <button type="button" className="btn-add-pill" onClick={openAddModal}>
@@ -1185,9 +1229,10 @@ function FoodBook({
                   reorderEnabled={reorderEnabled}
                   dragging={draggingId === item.id}
                   removing={removingIds.has(item.id)}
-                  isCalculatorLink={item.name === SUBWAY_ITEM_NAME}
+                  isCalculatorLink={isCalculatorItem(item)}
                   onToggle={handleCardToggle}
                   onOpenCalculator={openSubwayCalculator}
+                  onWarmCalculator={warmSubway}
                   onEdit={openEditModal}
                   onSetSubItemQty={handleSetSubItemQty}
                   onSetIngredientQty={handleSetIngredientQty}

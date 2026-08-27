@@ -21,7 +21,17 @@
     <title>Foodbook</title>
     <script>
       (function () {
-        var theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        // Reads the stored choice too (see useTheme.ts) — resolving from the OS
+        // alone here meant a pinned theme flashed the other one before React
+        // mounted and corrected it.
+        var stored = null
+        try { stored = localStorage.getItem('foodbook:theme') } catch (e) {}
+        var theme =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
         document.documentElement.dataset.theme = theme
       })()
     </script>

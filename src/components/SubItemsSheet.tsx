@@ -21,6 +21,9 @@ interface SubItemsSheetProps {
   baseQty: number
   guestOverrides?: SubItemOverrides
   guestIngredientOverrides?: IngredientOverrides
+  // Read-only viewer: their qty/ingredient changes can't reach the shared
+  // record and live in this browser only. That was never said anywhere.
+  isGuest: boolean
   closing: boolean
   onClose: () => void
   onSetQty: (subId: string, qty: number) => void
@@ -40,6 +43,7 @@ export function SubItemsSheet({
   baseQty,
   guestOverrides,
   guestIngredientOverrides,
+  isGuest,
   closing,
   onClose,
   onSetQty,
@@ -548,6 +552,10 @@ export function SubItemsSheet({
             )
           })}
         </div>
+
+        {isGuest && (
+          <div className="sub-items-sheet-guest-note">你的調整只存在這台裝置，不會改動原始紀錄</div>
+        )}
 
         <div className="sub-items-sheet-footer">
           <div className="sub-items-sheet-footer-stats">

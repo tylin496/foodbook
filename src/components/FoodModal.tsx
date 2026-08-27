@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Camera, Check, ChevronDown, GripVertical, Plus, X } from 'lucide-react'
+import { Calculator, Camera, Check, ChevronDown, GripVertical, Minus, Plus, X } from 'lucide-react'
 import type { FoodDraft, FoodIngredientDraft, FoodSubItemDraft } from '../types'
 import { uploadToCloudinary } from '../cloudinary'
 import { useDialogDismiss } from '../useDialogDismiss'
@@ -45,10 +45,18 @@ export function FoodModal({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
-  // Which sub-item's card is expanded in the form's accordion — collapsed by
-  // default, single-expand (matches the chip-menu redesign's simplified
-  // sub-item information hierarchy).
-  const [expandedSubId, setExpandedSubId] = useState<string | null>(null)
+  // Which sub-items are expanded. Collapsed by default, but no longer
+  // single-expand: opening one closed the other, so entering numbers across
+  // two sub-items meant reopening the one you were just in, every time.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const expandOnly = (id: string) => setExpandedIds((prev) => new Set(prev).add(id))
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const [confirmDelete, setConfirmDelete] = useState(false)
   const saveTimerRef = useRef<number | null>(null)
   const onSaveRef = useRef(onSave)
@@ -68,6 +76,15 @@ export function FoodModal({
   const backdropProps = useDialogDismiss(onCancel)
   const containerRef = useRef<HTMLDivElement>(null)
   useFocusTrap(containerRef, true)
+
+  // "確定刪除？" used to sit there for the rest of the session once armed —
+  // scroll away, come back ten minutes later, and a stray tap deletes the
+  // record. Disarms itself the way a confirmation should.
+  useEffect(() => {
+    if (!confirmDelete) return
+    const timer = window.setTimeout(() => setConfirmDelete(false), 5000)
+    return () => window.clearTimeout(timer)
+  }, [confirmDelete])
 
   // min="0" on these fields doesn't actually stop a typed/pasted "-5" — with
   // no <form> wrapping the dialog, the constraint validation it depends on
@@ -124,12 +141,12 @@ export function FoodModal({
         protein: '0',
         subItems: [baseSubItem, newSubItem],
       })
-      setExpandedSubId(newSubItem.id)
+      expandOnly(newSubItem.id)
       return
     }
 
     onChange({ ...draft, subItems: [...draft.subItems, newSubItem] })
-    setExpandedSubId(newSubItem.id)
+    expandOnly(newSubItem.id)
   }
 
   const updateSubItem = (id: string, patch: Partial<FoodSubItemDraft>) => {
@@ -177,7 +194,12 @@ export function FoodModal({
         (target.ingredients?.length ?? 0) > 0)
     if (hasContent && !(await confirm('確定要刪除這個子項目嗎？'))) return
     onChange({ ...draft, subItems: draft.subItems.filter((sub) => sub.id !== id) })
-    setExpandedSubId((current) => (current === id ? null : current))
+    setExpandedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
   }
 
   // Ingredients belong entirely to their sub-item (e.g. "鐵板麵" under "沙朗牛排"):
@@ -759,7 +781,7 @@ export function FoodModal({
         .filter((sub) => sub.id !== subItemId)
         .map((sub) => (sub.id === targetSubId ? { ...sub, ingredients: nextIngredients } : sub)),
     })
-    setExpandedSubId(targetSubId)
+    expandOnly(targetSubId)
   }
 
   const convertIngredientToSubItem = (subId: string, ingredientId: string, atIndex: number) => {
@@ -780,10 +802,11 @@ export function FoodModal({
     )
     nextSubItems.splice(atIndex, 0, converted)
     onChange({ ...draft, subItems: nextSubItems })
-    setExpandedSubId(converted.id)
+    expandOnly(converted.id)
   }
 
   const hasSubItems = draft.subItems.length > 0
+  const baseQty = Math.max(1, toNumber(draft.qty) || 1)
   const selectedSubItems = draft.subItems.filter((sub) => sub.selected)
   const totalWeight = roundAmount(
     toNumber(draft.weight) + selectedSubItems.reduce((sum, sub) => sum + subItemTotals(sub).weight, 0),
@@ -858,16 +881,42 @@ export function FoodModal({
         </div>
         {uploadError && <div className="upload-error">照片上傳失敗，請重試</div>}
 
-        <div className="field">
-          <label htmlFor="food-name">食物名稱</label>
-          <input
-            id="food-name"
-            className="input"
-            autoFocus
-            value={draft.name}
-            onChange={(e) => onChange({ ...draft, name: e.target.value })}
-            placeholder="例如：雞胸肉"
-          />
+        <div className="name-qty-row">
+          <div className="field">
+            <label htmlFor="food-name">食物名稱</label>
+            <input
+              id="food-name"
+              className="input"
+              autoFocus
+              value={draft.name}
+              onChange={(e) => onChange({ ...draft, name: e.target.value })}
+              placeholder="例如：雞胸肉"
+            />
+          </div>
+          {/* The item's own portions — the selection bar and the sub-items
+              sheet both step this, but the form that owns the record had no
+              way to set it at all. */}
+          <div className="field">
+            <label>份數</label>
+            <div className="sub-item-qty-stepper name-qty-stepper">
+              <button
+                type="button"
+                aria-label="減少份數"
+                disabled={baseQty <= 1}
+                onClick={() => onChange({ ...draft, qty: String(Math.max(1, baseQty - 1)) })}
+              >
+                <Minus size={13} />
+              </button>
+              <span className="sub-item-qty-stepper-value">{formatAmount(baseQty)}</span>
+              <button
+                type="button"
+                aria-label="增加份數"
+                onClick={() => onChange({ ...draft, qty: String(baseQty + 1) })}
+              >
+                <Plus size={13} />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="number-fields">
@@ -915,6 +964,28 @@ export function FoodModal({
           </div>
         </div>
 
+        {/* The calculator link used to be a match on the literal name "Subway",
+            so renaming the card silently dropped it. It's a property of the
+            record now, and this is where it's set. */}
+        <button
+          type="button"
+          className="calculator-toggle"
+          aria-pressed={draft.calculator}
+          onClick={() => onChange({ ...draft, calculator: !draft.calculator })}
+        >
+          <Calculator size={14} strokeWidth={2.2} />
+          <span className="calculator-toggle-label">連結 Subway 計算機</span>
+          <span className={`fb-check is-sm${draft.calculator ? ' is-on' : ''}`} aria-hidden="true">
+            {draft.calculator && <Check size={9} strokeWidth={3} />}
+          </span>
+        </button>
+
+        {hasSubItems && (
+          <div className="auto-sum-hint">
+            這三個數字由下方子項目自動加總，要修改請改子項目的數字
+          </div>
+        )}
+
         <div className="dialog-divider" />
 
         <div className="sub-items-section">
@@ -940,7 +1011,7 @@ export function FoodModal({
             >
               {draft.subItems.map((sub) => {
                 const subTotals = subItemTotals(sub)
-                const expanded = expandedSubId === sub.id
+                const expanded = expandedIds.has(sub.id)
                 return (
                   <div
                     className={`sub-item-row${sub.selected ? '' : ' is-excluded'}${sub.id === draggingSubItemId ? ' is-dragging' : ''}${expanded ? ' is-expanded' : ''}`}
@@ -952,11 +1023,11 @@ export function FoodModal({
                       role="button"
                       tabIndex={0}
                       aria-expanded={expanded}
-                      onClick={() => setExpandedSubId((current) => (current === sub.id ? null : sub.id))}
+                      onClick={() => toggleExpanded(sub.id)}
                       onKeyDown={(e) => {
                         if (e.key !== 'Enter' && e.key !== ' ') return
                         e.preventDefault()
-                        setExpandedSubId((current) => (current === sub.id ? null : sub.id))
+                        toggleExpanded(sub.id)
                       }}
                     >
                       <button
@@ -1246,6 +1317,9 @@ export function FoodModal({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
             {saveState === 'error' && <div className="upload-error">儲存失敗，請確認網路連線後重試</div>}
+            {saveState !== 'error' && draft.name.trim().length === 0 && (
+              <div className="save-hint">請先填食物名稱</div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" className="btn btn-secondary" onClick={onCancel}>
                 取消

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { IngredientOverrides, SubItemOverrides } from './types'
 
 // Guests (read-only viewers) can still adjust sub-item qty and toggle
@@ -48,5 +48,21 @@ export function useGuestOverrides() {
     })
   }
 
-  return { overrides, ingredientOverrides, setQty, setIngredientQty }
+  // Overrides are keyed by item id and never expired, so every record the
+  // owner deleted left its entries behind in the guest's localStorage for
+  // good — growing forever, and (with generateId's timestamp prefix) never
+  // colliding back into use. Dropped once the item list is known.
+  const prune = useCallback((validItemIds: Set<string>) => {
+    const drop = <T,>(prev: Record<string, T>) => {
+      const stale = Object.keys(prev).filter((id) => !validItemIds.has(id))
+      if (stale.length === 0) return prev
+      const next = { ...prev }
+      stale.forEach((id) => delete next[id])
+      return next
+    }
+    setOverrides(drop)
+    setIngredientOverrides(drop)
+  }, [])
+
+  return { overrides, ingredientOverrides, setQty, setIngredientQty, prune }
 }

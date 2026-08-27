@@ -1572,3 +1572,47 @@ html.has-dialog .page-scroll { overflow: hidden; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
+
+/* — edit form: name and the item's own 份數 share a row — */
+.name-qty-row { display: flex; align-items: flex-end; gap: var(--space-3); }
+.name-qty-row .field:first-child { flex: 1; min-width: 0; }
+.name-qty-row .field:last-child { flex: none; }
+.name-qty-stepper {
+  height: 46px; padding: 0 4px; border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+}
+
+/* Three fields going read-only with no explanation reads as broken — this is
+   the moment a record grows sub-items and the totals stop being typed. */
+.auto-sum-hint {
+  font-size: 11px; line-height: 1.5; color: var(--ink-3);
+  margin-top: -8px;
+}
+.save-hint { font-size: 12px; color: var(--ink-3); }
+
+/* — calculator link toggle — a property of the record, set here. */
+.calculator-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  height: 40px; padding: 0 10px 0 12px;
+  background: var(--bg-soft); border: none; border-radius: var(--radius-sm);
+  color: var(--ink-2); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.calculator-toggle:hover { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.calculator-toggle[aria-pressed='true'] { color: var(--chip-ink); }
+.calculator-toggle-label { flex: 1; min-width: 0; text-align: left; }
+
+.theme-btn {
+  position: relative;
+  width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: none; cursor: pointer;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-soft); color: var(--ink-3);
+}
+.theme-btn:hover { color: var(--ink); }
+.theme-btn::before { content: ''; position: absolute; inset: -6px; border-radius: 50%; }
+
+.sub-items-sheet-guest-note {
+  flex: none; padding: 8px 18px 0;
+  font-size: 11px; color: var(--ink-3);
+}

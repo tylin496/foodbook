@@ -37,6 +37,11 @@ export interface FoodItem {
   protein: number
   calories: number
   createdAt: number
+  // Marks the card that launches an embedded calculator instead of toggling
+  // straight into the selection total. Stored on the record, so renaming the
+  // card no longer silently drops the feature (it used to key off the literal
+  // name "Subway"); null clears it.
+  calculator?: 'subway' | null
   subItems?: FoodSubItem[]
   // How many portions of the item's own weight/protein/calories were
   // consumed — mirrors FoodSubItem.qty, but for the item itself rather than
@@ -71,6 +76,10 @@ export type FoodDraft = {
   weight: string
   protein: string
   calories: string
+  /** The item's own portions — see FoodItem.qty. */
+  qty: string
+  /** See FoodItem.calculator. */
+  calculator: boolean
   subItems: FoodSubItemDraft[]
 }
 
@@ -80,6 +89,8 @@ export const emptyDraft: FoodDraft = {
   weight: '',
   protein: '',
   calories: '',
+  qty: '1',
+  calculator: false,
   subItems: [],
 }
 

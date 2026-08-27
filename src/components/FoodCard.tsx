@@ -25,6 +25,9 @@ interface FoodCardProps {
   onToggle: (id: string) => void
   onEdit: (id: string) => void
   onOpenCalculator?: () => void
+  // Called on hover/press of the calculator badge so its iframe can start
+  // loading before the tap completes.
+  onWarmCalculator?: () => void
   onSetSubItemQty: (id: string, subId: string, qty: number) => void
   onSetIngredientQty: (id: string, subId: string, ingredientId: string, qty: number) => void
   onSetBaseQty: (id: string, qty: number) => void
@@ -49,6 +52,7 @@ export function FoodCard({
   onToggle,
   onEdit,
   onOpenCalculator,
+  onWarmCalculator,
   onSetSubItemQty,
   onSetIngredientQty,
   onSetBaseQty,
@@ -314,6 +318,8 @@ export function FoodCard({
               type="button"
               className="calculator-badge"
               title="點擊開啟計算機"
+              onPointerEnter={onWarmCalculator}
+              onPointerDown={onWarmCalculator}
               aria-label={`開啟 ${item.name} 計算機`}
               onClick={(e) => {
                 e.stopPropagation()
@@ -411,6 +417,7 @@ export function FoodCard({
           baseQty={baseQty}
           guestOverrides={guestOverrides}
           guestIngredientOverrides={guestIngredientOverrides}
+          isGuest={readOnly}
           closing={sheetClosing}
           onClose={closeSheet}
           onSetQty={(subId, qty) => {
