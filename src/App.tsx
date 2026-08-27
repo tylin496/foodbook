@@ -14,6 +14,9 @@ import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
 import { copyText, formatItemsAsText, generateId, roundAmount, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
 import { embedContext, postSelectionTotals } from './embed'
+import { createEdgeAutoScroll } from './autoScroll'
+import { useToasts } from './useToasts'
+import { Toasts } from './components/Toasts'
 
 const GRAYSCALE_PHOTOS = false
 const OWNER_UID = '277SEyYGZyUyapmKB5Fu4OC4dDR2'
@@ -77,6 +80,20 @@ function FoodBook({
     setIngredientQty: setGuestIngredientQty,
   } = useGuestOverrides()
   const { confirm, confirmDialogProps } = useConfirm()
+  const { toasts, toast, dismiss: dismissToast } = useToasts()
+
+  // Selection toggles, qty steppers and drag-reorder all wrote fire-and-forget:
+  // on a denied or failed write the screen updated, the change never landed,
+  // and nothing said so until a reload wiped it. Only the save button ever
+  // reported. Everything that writes goes through here now.
+  const commit = useCallback(
+    (updater: Parameters<typeof setItems>[0]) => {
+      void setItems(updater).then((result) => {
+        if (!result.ok) toast('變更沒有存到雲端，請確認網路連線後重試')
+      })
+    },
+    [setItems, toast],
+  )
   useTheme(embedContext?.theme ?? null)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -383,33 +400,53 @@ function FoodBook({
     }
   })
 
+  // Also called from the auto-scroll loop below: while the grid scrolls under a
+  // held-still pointer, the card it's over keeps changing with no pointermove
+  // to say so.
+  const applyDragReorder = useCallback(() => {
+    const dragging = dragMetaRef.current
+    if (!dragging) return
+    const { x, y } = lastPointerRef.current
+    const under = document.elementFromPoint(x, y)
+    const cardEl = under instanceof Element ? under.closest<HTMLElement>('[data-food-id]') : null
+    const targetId = cardEl?.dataset.foodId
+    if (!targetId || targetId === dragging.id) return
+    captureRects(dragging.id)
+    setItems((prev) => {
+      const fromIndex = prev.findIndex((item) => item.id === dragging.id)
+      const toIndex = prev.findIndex((item) => item.id === targetId)
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev
+      const next = [...prev]
+      const [moved] = next.splice(fromIndex, 1)
+      next.splice(toIndex, 0, moved)
+      return next
+    })
+  }, [setItems, captureRects])
+
+  const applyDragReorderRef = useRef(applyDragReorder)
+  applyDragReorderRef.current = applyDragReorder
+  // Lazily built once — passing the call directly to useRef would rebuild (and
+  // throw away) a scroller on every render.
+  const autoScrollRef = useRef<ReturnType<typeof createEdgeAutoScroll> | null>(null)
+  if (autoScrollRef.current === null) {
+    autoScrollRef.current = createEdgeAutoScroll(() => applyDragReorderRef.current())
+  }
+  const autoScroll = autoScrollRef.current
+
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
-      const dragging = dragMetaRef.current
-      if (!dragging) return
+      if (!dragMetaRef.current) return
       lastPointerRef.current = { x: e.clientX, y: e.clientY }
-
-      const under = document.elementFromPoint(e.clientX, e.clientY)
-      const cardEl = under instanceof Element ? under.closest<HTMLElement>('[data-food-id]') : null
-      const targetId = cardEl?.dataset.foodId
-      if (!targetId || targetId === dragging.id) return
-      captureRects(dragging.id)
-      setItems((prev) => {
-        const fromIndex = prev.findIndex((item) => item.id === dragging.id)
-        const toIndex = prev.findIndex((item) => item.id === targetId)
-        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev
-        const next = [...prev]
-        const [moved] = next.splice(fromIndex, 1)
-        next.splice(toIndex, 0, moved)
-        return next
-      })
+      autoScroll.update(foodGridRef.current?.closest<HTMLElement>('.page-scroll') ?? null, e.clientY)
+      applyDragReorder()
     },
-    [setItems, findCardEl, captureRects],
+    [applyDragReorder, autoScroll],
   )
 
   const handlePointerUp = useCallback(() => {
     const meta = dragMetaRef.current
     stopSpringLoop()
+    autoScroll.stop()
     if (meta) {
       const el = findCardEl(meta.id)
       if (el) {
@@ -427,7 +464,7 @@ function FoodBook({
     window.removeEventListener('pointermove', handlePointerMove)
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
-  }, [findCardEl, stopSpringLoop])
+  }, [findCardEl, stopSpringLoop, autoScroll])
 
   const handleDragHandlePointerDown = (id: string, e: React.PointerEvent) => {
     if (!reorderEnabled) return
@@ -464,8 +501,9 @@ function FoodBook({
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerUp)
       stopSpringLoop()
+      autoScroll.stop()
     }
-  }, [handlePointerMove, handlePointerUp, stopSpringLoop])
+  }, [handlePointerMove, handlePointerUp, stopSpringLoop, autoScroll])
 
   const selectedItems = useMemo(
     () => displayItems.filter((item) => selectedIds.has(item.id)),
@@ -710,7 +748,7 @@ function FoodBook({
   // qty 0 excludes the sub-item but keeps its stored qty, so re-including it
   // restores the prior count.
   const setSubItemQty = (id: string, subId: string, qty: number) => {
-    setItems((prev) =>
+    commit((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
         const subItems = item.subItems ?? []
@@ -728,7 +766,7 @@ function FoodBook({
   // burger's bun) without touching its sub-item's own qty/selected. qty 0
   // excludes the ingredient but keeps its stored qty, mirroring setSubItemQty.
   const setIngredientQty = (id: string, subId: string, ingredientId: string, qty: number) => {
-    setItems((prev) =>
+    commit((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
         const subItems = item.subItems ?? []
@@ -778,7 +816,7 @@ function FoodBook({
   const handleSetBaseQty = (id: string, qty: number) => {
     const clamped = Math.max(1, qty)
     if (isOwner) {
-      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, qty: clamped } : item)))
+      commit((prev) => prev.map((item) => (item.id === id ? { ...item, qty: clamped } : item)))
       return
     }
     setGuestSubItemQty(id, BASE_QTY_KEY, clamped)
@@ -797,7 +835,7 @@ function FoodBook({
   // Manual drag order from the sub-items sheet — rewrites the shared record
   // directly, so it's only ever wired up for the owner (see FoodCard).
   const reorderIngredients = (id: string, subId: string, orderedIngredientIds: string[]) => {
-    setItems((prev) =>
+    commit((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
         const subItems = item.subItems ?? []
@@ -887,11 +925,15 @@ function FoodBook({
     // an extra confirm() here would double-prompt.
     if (editingId === id) closeModal()
     if (removingIds.has(id)) return
+    // A confirm is a speed bump, not a way back. Hold the record and its slot
+    // so the toast can actually undo it.
+    const index = items.findIndex((item) => item.id === id)
+    const removed = index === -1 ? null : items[index]
     setRemovingIds((prev) => new Set(prev).add(id))
     window.setTimeout(() => {
       bulkFlipRef.current = true
       captureRects(id)
-      setItems((prev) => prev.filter((item) => item.id !== id))
+      commit((prev) => prev.filter((item) => item.id !== id))
       setSelectedIds((prev) => {
         if (!prev.has(id)) return prev
         const next = new Set(prev)
@@ -903,6 +945,21 @@ function FoodBook({
         next.delete(id)
         return next
       })
+      if (removed) {
+        toast(`已刪除「${removed.name}」`, {
+          label: '復原',
+          onClick: () => {
+            bulkFlipRef.current = true
+            captureRects()
+            commit((prev) => {
+              if (prev.some((item) => item.id === removed.id)) return prev
+              const next = [...prev]
+              next.splice(Math.min(index, next.length), 0, removed)
+              return next
+            })
+          },
+        })
+      }
     }, 230)
   }
 
@@ -1089,6 +1146,16 @@ function FoodBook({
                   onSetBaseQty={handleSetBaseQty}
                   onReorderIngredients={isOwner ? reorderIngredients : undefined}
                   onDragHandlePointerDown={handleDragHandlePointerDown}
+                  onReorderBlocked={
+                    isOwner
+                      ? () =>
+                          toast(
+                            search.trim().length > 0
+                              ? '清除搜尋後才能拖曳排序'
+                              : '切換到「預設」排序才能拖曳排序',
+                          )
+                      : undefined
+                  }
                   guestOverrides={isOwner ? undefined : guestOverrides[item.id]}
                   guestIngredientOverrides={isOwner ? undefined : guestIngredientOverrides[item.id]}
                 />
@@ -1132,6 +1199,8 @@ function FoodBook({
           onConfirm={() => dismissSubway(true)}
         />
       )}
+
+      <Toasts toasts={toasts} raised={selectedItems.length > 0} onDismiss={dismissToast} />
 
       {confirmDialogProps && <ConfirmDialog {...confirmDialogProps} />}
     </>

@@ -30,6 +30,9 @@ interface FoodCardProps {
   onSetBaseQty: (id: string, qty: number) => void
   onReorderIngredients?: (id: string, subId: string, orderedIngredientIds: string[]) => void
   onDragHandlePointerDown: (id: string, e: React.PointerEvent) => void
+  // Pressing and holding a card while a sort mode or a search is active does
+  // nothing at all, with nothing said. Let the app explain why.
+  onReorderBlocked?: () => void
   guestOverrides?: SubItemOverrides
   guestIngredientOverrides?: IngredientOverrides
 }
@@ -51,6 +54,7 @@ export function FoodCard({
   onSetBaseQty,
   onReorderIngredients,
   onDragHandlePointerDown,
+  onReorderBlocked,
   guestOverrides,
   guestIngredientOverrides,
 }: FoodCardProps) {
@@ -79,21 +83,29 @@ export function FoodCard({
   const longPressTimer = useRef<number | null>(null)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const longPressFired = useRef(false)
-  // Set when a move-past-tolerance turns out to be a scroll attempt rather than
-  // a long-press-drag, so the click that pointerup still synthesizes gets eaten
-  // instead of toggling the card.
-  const suppressClick = useRef(false)
-  // touch-action: none (below) stops the browser from ever taking over the
-  // gesture as a native scroll, so once we decide it's a scroll we have to
-  // replay it by hand onto the page scroller.
-  const scrolling = useRef(false)
-  const scrollTarget = useRef<HTMLElement | null>(null)
-  const lastPointerY = useRef(0)
-  const lastMoveTime = useRef(0)
-  const velocityY = useRef(0)
-  const momentumFrame = useRef<number | null>(null)
   const lastPointerType = useRef<string>('mouse')
+  const photoRef = useRef<HTMLDivElement>(null)
   const [holding, setHolding] = useState(false)
+
+  // The photo used to carry touch-action: none for the owner, which took the
+  // gesture away from the browser entirely — so the card also had to replay
+  // scrolling and invent its own momentum, and owner and guest ended up with
+  // measurably different scroll feel on the same page. Native pan-y for
+  // everyone; once the long press has actually fired we take the gesture over
+  // by preventing the touchmove instead. The finger has by definition not
+  // moved past the tolerance by then, so no scroll has begun to fight.
+  //
+  // Attached by hand because React's onTouchMove is passive, and a passive
+  // listener's preventDefault() does nothing.
+  useEffect(() => {
+    const el = photoRef.current
+    if (!el) return
+    const onTouchMove = (e: TouchEvent) => {
+      if (longPressFired.current) e.preventDefault()
+    }
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onTouchMove)
+  }, [])
 
   // Sub-item chips: show as many as actually fit before collapsing the rest
   // into a "+N" chip, instead of always showing just the first one.
@@ -170,51 +182,37 @@ export function FoodCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subItems.map(chipLabel).join('|')])
 
-  const stopMomentum = () => {
-    if (momentumFrame.current !== null) {
-      cancelAnimationFrame(momentumFrame.current)
-      momentumFrame.current = null
-    }
-  }
-
-  // Native touch scrolling is blocked on this element (touch-action: none, below),
-  // so once we take a gesture over as a manual scroll we also have to fake the
-  // momentum/glide a real scroll would have had, or it just stops dead on release.
-  const startMomentum = (target: HTMLElement, initialVelocity: number) => {
-    let velocity = initialVelocity
-    let lastTs: number | null = null
-    const step = (ts: number) => {
-      const dt = lastTs === null ? 16 : ts - lastTs
-      lastTs = ts
-      target.scrollBy(0, -velocity * dt)
-      velocity *= Math.pow(0.95, dt / 16)
-      momentumFrame.current = Math.abs(velocity) > 0.02 ? requestAnimationFrame(step) : null
-    }
-    momentumFrame.current = requestAnimationFrame(step)
-  }
-
   const clearLongPress = () => {
     if (longPressTimer.current !== null) {
       window.clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
     pointerStart.current = null
-    scrolling.current = false
     setHolding(false)
   }
 
   const handlePhotoPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
-    stopMomentum()
     lastPointerType.current = e.pointerType
-    suppressClick.current = false
-    if (!reorderEnabled) return
+    if (!reorderEnabled) {
+      // Only a *held* press asks to reorder — a tap is just a tap, and toasting
+      // on every one of those would be noise. Same timer, no drag at the end
+      // of it, and longPressFired eats the click so the card doesn't also
+      // toggle underneath the explanation.
+      if (!onReorderBlocked) return
+      pointerStart.current = { x: e.clientX, y: e.clientY }
+      longPressTimer.current = window.setTimeout(() => {
+        longPressTimer.current = null
+        longPressFired.current = true
+        onReorderBlocked()
+      }, LONG_PRESS_MS)
+      return
+    }
     // Capture so pointermove/pointerup keep targeting this card even if the
     // cursor leaves the viewport mid-drag — without this a fast release
     // outside the window never fires pointerup and the drag sticks.
     e.currentTarget.setPointerCapture(e.pointerId)
     pointerStart.current = { x: e.clientX, y: e.clientY }
-    lastPointerY.current = e.clientY
     setHolding(true)
     longPressTimer.current = window.setTimeout(() => {
       longPressTimer.current = null
@@ -224,39 +222,13 @@ export function FoodCard({
     }, LONG_PRESS_MS)
   }
 
+  // Past the tolerance the gesture is a scroll (or a mouse drag), never a
+  // long press — let go of it and let the browser have it.
   const handlePhotoPointerMove = (e: React.PointerEvent) => {
-    if (scrolling.current) {
-      const now = performance.now()
-      const dt = Math.max(1, now - lastMoveTime.current)
-      const dy = lastPointerY.current - e.clientY
-      scrollTarget.current?.scrollBy(0, dy)
-      velocityY.current = -dy / dt
-      lastPointerY.current = e.clientY
-      lastMoveTime.current = now
-      return
-    }
     if (!pointerStart.current) return
     const dx = e.clientX - pointerStart.current.x
     const dy = e.clientY - pointerStart.current.y
-    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE) {
-      clearLongPress()
-      if (e.pointerType !== 'mouse') {
-        suppressClick.current = true
-        scrolling.current = true
-        lastPointerY.current = e.clientY
-        lastMoveTime.current = performance.now()
-        velocityY.current = 0
-        scrollTarget.current = (e.target as HTMLElement).closest<HTMLElement>('.page-scroll')
-        scrollTarget.current?.scrollBy(0, -dy)
-      }
-    }
-  }
-
-  const handlePhotoPointerUp = () => {
-    if (scrolling.current && scrollTarget.current) {
-      startMomentum(scrollTarget.current, velocityY.current)
-    }
-    clearLongPress()
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_TOLERANCE) clearLongPress()
   }
 
   return (
@@ -270,10 +242,6 @@ export function FoodCard({
           longPressFired.current = false
           return
         }
-        if (suppressClick.current) {
-          suppressClick.current = false
-          return
-        }
         onToggle(item.id)
       }}
       onKeyDown={(e) => {
@@ -285,11 +253,11 @@ export function FoodCard({
       aria-pressed={selected}
     >
       <div
+        ref={photoRef}
         className={`photo${holding ? ' is-holding' : ''}${reorderEnabled ? ' is-draggable' : ''}`}
-        style={reorderEnabled ? { touchAction: 'none' } : undefined}
         onPointerDown={handlePhotoPointerDown}
         onPointerMove={handlePhotoPointerMove}
-        onPointerUp={handlePhotoPointerUp}
+        onPointerUp={clearLongPress}
         onPointerCancel={clearLongPress}
         onPointerLeave={clearLongPress}
         onContextMenu={(e) => {
