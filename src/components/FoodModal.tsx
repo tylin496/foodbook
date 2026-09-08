@@ -14,8 +14,10 @@ interface FoodModalProps {
   closing: boolean
   onChange: (draft: FoodDraft) => void
   // Resolves once the write actually settles, with whether it succeeded —
-  // the modal waits for this before claiming success.
-  onSave: () => Promise<boolean>
+  // the modal waits for this before claiming success. The overrides carry
+  // fields that landed too late to be in the draft React has rendered (the
+  // photo URL of an upload 儲存 just waited for).
+  onSave: (overrides?: Partial<FoodDraft>) => Promise<boolean>
   onCancel: () => void
   onDelete: () => void
   confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
@@ -77,6 +79,16 @@ export function FoodModal({
   onSaveRef.current = onSave
   const onCancelRef = useRef(onCancel)
   onCancelRef.current = onCancel
+  // The upload finishes long after the change event that started it, so it
+  // can't write through the draft and onChange its own handler captured —
+  // by then the user has typed a name into a newer one.
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  // The upload in flight, if any, resolving to its URL (or null if it
+  // failed). 儲存 waits on it instead of writing a record without the photo.
+  const pendingUploadRef = useRef<Promise<string | null> | null>(null)
 
   useEffect(() => {
     // The write already happened by the time we reach 'success' (see
@@ -110,7 +122,24 @@ export function FoodModal({
   const handleSaveClick = async () => {
     if (draft.name.trim().length === 0 || saveState === 'saving' || saveState === 'success') return
     setSaveState('saving')
-    const ok = await onSaveRef.current()
+    // A photo picked a moment ago may still be on the wire. Saving straight
+    // past it wrote the record without the image and threw the upload away;
+    // wait for it and carry the URL into this same write, because the draft
+    // React has rendered doesn't have it yet.
+    const pending = pendingUploadRef.current
+    let overrides: Partial<FoodDraft> | undefined
+    if (pending) {
+      const url = await pending
+      // Failed upload: the photo is the thing the user was waiting for, so
+      // don't quietly save without it — the error is on screen and pressing
+      // 儲存 again (nothing pending now) saves the record as it stands.
+      if (url === null) {
+        setSaveState('idle')
+        return
+      }
+      overrides = { imageUrl: url }
+    }
+    const ok = await onSaveRef.current(overrides)
     if (!ok) {
       setSaveState('error')
       return
@@ -832,24 +861,36 @@ export function FoodModal({
     toNumber(draft.protein) + selectedSubItems.reduce((sum, sub) => sum + subItemTotals(sub).protein, 0),
   )
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    // Re-picking the same file is a real retry after a failure, and without
+    // this the input's value never changes so no change event fires.
+    e.target.value = ''
 
     setPreview(URL.createObjectURL(file))
     setUploadError(false)
     setUploading(true)
-    try {
-      const url = await uploadToCloudinary(file)
-      // Only the draft — writing it straight onto the record here meant a photo
-      // swapped and then abandoned with 取消 had already replaced the old one.
-      // It lands with everything else when 儲存 runs.
-      onChange({ ...draft, imageUrl: url })
-    } catch {
-      setUploadError(true)
-    } finally {
-      setUploading(false)
-    }
+    const pending: Promise<string | null> = (async () => {
+      try {
+        const url = await uploadToCloudinary(file)
+        // Only the draft — writing it straight onto the record here meant a photo
+        // swapped and then abandoned with 取消 had already replaced the old one.
+        // It lands with everything else when 儲存 runs.
+        onChangeRef.current({ ...draftRef.current, imageUrl: url })
+        return url
+      } catch {
+        setUploadError(true)
+        return null
+      } finally {
+        setUploading(false)
+      }
+    })()
+    pendingUploadRef.current = pending
+    // Only clear the slot if a newer pick hasn't already claimed it.
+    void pending.then(() => {
+      if (pendingUploadRef.current === pending) pendingUploadRef.current = null
+    })
   }
 
   return (

@@ -914,9 +914,12 @@ function FoodBook({
   // regardless of what happened. Closing the modal is the modal's own call
   // (it does so via onCancel once it's shown the success state) — this just
   // does the write.
-  const handleSave = async () => {
-    if (draft.name.trim().length === 0) return false
-    const subItems = draft.subItems
+  // overrides carry anything the modal resolved after the draft it rendered —
+  // a photo whose upload 儲存 waited for, which React hasn't re-rendered yet.
+  const handleSave = async (overrides?: Partial<FoodDraft>) => {
+    const d = overrides ? { ...draft, ...overrides } : draft
+    if (d.name.trim().length === 0) return false
+    const subItems = d.subItems
       .filter((sub) => sub.name.trim().length > 0)
       .map((sub) => ({
         id: sub.id,
@@ -946,13 +949,13 @@ function FoodBook({
             item.id === editingId
               ? {
                   ...item,
-                  name: draft.name.trim(),
-                  imageUrl: draft.imageUrl,
-                  qty: Math.max(1, toNumber(draft.qty) || 1),
-                  calculator: draft.calculator ? ('subway' as const) : null,
-                  weight: toNumber(draft.weight),
-                  protein: toNumber(draft.protein),
-                  calories: toNumber(draft.calories),
+                  name: d.name.trim(),
+                  imageUrl: d.imageUrl,
+                  qty: Math.max(1, toNumber(d.qty) || 1),
+                  calculator: d.calculator ? ('subway' as const) : null,
+                  weight: toNumber(d.weight),
+                  protein: toNumber(d.protein),
+                  calories: toNumber(d.calories),
                   subItems,
                 }
               : item,
@@ -961,13 +964,13 @@ function FoodBook({
       : await setItems((prev) => [
           {
             id: activeId ?? generateId(),
-            name: draft.name.trim(),
-            imageUrl: draft.imageUrl,
-            qty: Math.max(1, toNumber(draft.qty) || 1),
-            calculator: draft.calculator ? ('subway' as const) : null,
-            weight: toNumber(draft.weight),
-            protein: toNumber(draft.protein),
-            calories: toNumber(draft.calories),
+            name: d.name.trim(),
+            imageUrl: d.imageUrl,
+            qty: Math.max(1, toNumber(d.qty) || 1),
+            calculator: d.calculator ? ('subway' as const) : null,
+            weight: toNumber(d.weight),
+            protein: toNumber(d.protein),
+            calories: toNumber(d.calories),
             createdAt: Date.now(),
             subItems,
           },
