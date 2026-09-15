@@ -65,22 +65,40 @@ export function SubItemsSheet({
   // two controls for the same number (both scale the card's only part), so the
   // row drops its own and the header one speaks for the whole card.
   const soloRow = subItems.length === 1
-  const sortedRows = [...rows].sort((a, b) => Number(b.activeQty > 0) - Number(a.activeQty > 0))
 
-  // Selected ingredients float to the top, same as sortedRows above; a manual
-  // drag (see handleIngredientGripMove) reorders within that grouping by
-  // persisting the new full id order back to sub.ingredients.
-  const getSortedIngredients = (sub: FoodSubItem) =>
-    [...(sub.ingredients ?? [])].sort(
-      (a, b) =>
-        Number(getEffectiveIngredientQty(b, guestIngredientOverrides) > 0) -
-        Number(getEffectiveIngredientQty(a, guestIngredientOverrides) > 0),
-    )
+  // Selected rows and ingredients float to the top — but grouped by what was
+  // selected when the sheet opened, not live. Sorting on the current state sent
+  // an unchecked row flying to the bottom of a long list the instant it was
+  // tapped, out of reach of the tap that would undo it. The next open re-sorts.
+  // Anything added since opening falls back to its live state.
+  const [openedSelection] = useState(() => {
+    const snapshot = new Map<string, boolean>()
+    subItems.forEach((sub) => {
+      snapshot.set(sub.id, getEffectiveSubItemQty(sub, guestOverrides) > 0)
+      sub.ingredients?.forEach((ing) =>
+        snapshot.set(`${sub.id}/${ing.id}`, getEffectiveIngredientQty(ing, guestIngredientOverrides) > 0),
+      )
+    })
+    return snapshot
+  })
+  const sortedRows = [...rows].sort(
+    (a, b) =>
+      Number(openedSelection.get(b.sub.id) ?? b.activeQty > 0) -
+      Number(openedSelection.get(a.sub.id) ?? a.activeQty > 0),
+  )
 
-  // Selected rows float to the top (sortedRows above), so unchecking one
-  // teleports it to the bottom the instant it's tapped — and the finger is now
-  // over whatever moved up into its place. Replay the reshuffle as motion so
-  // the row can be followed, and so a second tap isn't aimed at a stale target.
+  // Same opened-time grouping as sortedRows above; a manual drag (see
+  // handleIngredientGripMove) reorders within that grouping by persisting the
+  // new full id order back to sub.ingredients.
+  const getSortedIngredients = (sub: FoodSubItem) => {
+    const wasSelected = (ing: NonNullable<FoodSubItem['ingredients']>[number]) =>
+      openedSelection.get(`${sub.id}/${ing.id}`) ?? getEffectiveIngredientQty(ing, guestIngredientOverrides) > 0
+    return [...(sub.ingredients ?? [])].sort((a, b) => Number(wasSelected(b)) - Number(wasSelected(a)))
+  }
+
+  // Toggling a row no longer moves it, but it still grows or shrinks (its
+  // stepper and strikethrough come and go), shifting every row below. Replay
+  // that shift as motion rather than a snap.
   const rowsContainerRef = useRef<HTMLDivElement>(null)
   // Same element as rowsContainerRef, named for the other job it does: it is
   // the sheet's scroller, and what an ingredient drag nudges at the edges.
@@ -485,7 +503,7 @@ export function SubItemsSheet({
                               aria-label={ingSelected ? '取消計入加總' : '計入加總'}
                               onClick={() => {
                                 // Same reason as captureRowRects above — the
-                                // ingredient list re-sorts on this tap.
+                                // rows below shift as this one changes size.
                                 captureIngredientRects(sub.id)
                                 onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : 1)
                               }}
