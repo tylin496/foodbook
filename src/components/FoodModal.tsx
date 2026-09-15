@@ -1205,7 +1205,7 @@ export function FoodModal({
                         type="number"
                         inputMode="decimal"
                         min="0"
-                        step="0.5"
+                        step="1"
                         value={sub.qty}
                         onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
                         aria-label="份數"
