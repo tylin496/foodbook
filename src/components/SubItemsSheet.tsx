@@ -385,7 +385,6 @@ export function SubItemsSheet({
           )}
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
-            const isLastSelected = selected && selectedCount <= 1
             // An excluded row has nothing to step (the checkbox brings it back
             // at one portion), and a lone row is stepped by the header's 份數 —
             // both then carry their qty as a ×N on the name instead.
@@ -410,13 +409,7 @@ export function SubItemsSheet({
                     type="button"
                     className={`fb-check${selected ? ' is-on' : ''}`}
                     aria-pressed={selected}
-                    aria-label={
-                      isLastSelected ? '至少要保留一項' : selected ? '取消計入加總' : '計入加總'
-                    }
-                    // Disabled with no explanation read as a broken control —
-                    // especially right after 清除, which lands here by design.
-                    title={isLastSelected ? '至少要保留一項' : undefined}
-                    disabled={isLastSelected}
+                    aria-label={selected ? '取消計入加總' : '計入加總'}
                     onClick={() => {
                       captureRowRects()
                       onSetQty(sub.id, activeQty > 0 ? 0 : 1)
