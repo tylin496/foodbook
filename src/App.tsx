@@ -35,9 +35,9 @@ function isCalculatorItem(item: { name: string; calculator?: 'subway' | null }):
   if (item.calculator === null) return false
   return item.calculator === 'subway' || item.name === SUBWAY_ITEM_NAME
 }
-type SortMode = 'manual' | 'calories' | 'protein'
-const SORT_MODE_KEY = 'food-diary:sort-mode'
-const SORT_DIR_KEY = 'food-diary:sort-dir'
+type SortKey = 'calories' | 'protein'
+type SortSpec = { key: SortKey; dir: 'desc' | 'asc' }
+const SORT_SPECS_KEY = 'food-diary:sort-specs'
 
 export default function App() {
   const { user, loading: authLoading, signIn, logOut, signInError } = useAuth()
@@ -240,70 +240,106 @@ function FoodBook({
     })
   }, [displayItems, search])
 
-  const [sortMode, setSortMode] = useState<SortMode>(() => {
+  // Active sort keys in the order they were turned on; empty = manual order.
+  const [sortSpecs, setSortSpecs] = useState<SortSpec[]>(() => {
     try {
-      const cached = localStorage.getItem(SORT_MODE_KEY)
-      return cached === 'calories' || cached === 'protein' ? cached : 'manual'
+      const cached = JSON.parse(localStorage.getItem(SORT_SPECS_KEY) ?? 'null')
+      if (Array.isArray(cached)) {
+        return cached.filter(
+          (s, i, arr): s is SortSpec =>
+            (s?.key === 'calories' || s?.key === 'protein') &&
+            (s.dir === 'asc' || s.dir === 'desc') &&
+            arr.findIndex((o) => o?.key === s.key) === i,
+        )
+      }
+      // Pre-multi-sort single mode, carried over once.
+      const legacy = localStorage.getItem('food-diary:sort-mode')
+      if (legacy === 'calories' || legacy === 'protein') {
+        return [{ key: legacy, dir: localStorage.getItem('food-diary:sort-dir') === 'asc' ? 'asc' : 'desc' }]
+      }
     } catch {
-      return 'manual'
+      // unreadable — fall through to manual
     }
-  })
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>(() => {
-    try {
-      return localStorage.getItem(SORT_DIR_KEY) === 'asc' ? 'asc' : 'desc'
-    } catch {
-      return 'desc'
-    }
+    return []
   })
 
   useEffect(() => {
     try {
-      localStorage.setItem(SORT_MODE_KEY, sortMode)
-      localStorage.setItem(SORT_DIR_KEY, sortDir)
+      localStorage.setItem(SORT_SPECS_KEY, JSON.stringify(sortSpecs))
     } catch {
       // storage full or unavailable — sort choice just won't persist
     }
-  }, [sortMode, sortDir])
+  }, [sortSpecs])
 
-  const handleSortPillClick = (mode: SortMode) => {
-    if (mode === 'manual') {
-      setSortMode('manual')
+  // Each tap on a key pill cycles it ↓ → ↑ → off; the other key stays as-is,
+  // so both can be on at once. 預設 clears everything.
+  const handleSortPillClick = (key: SortKey | 'manual') => {
+    if (key === 'manual') {
+      setSortSpecs([])
       return
     }
-    if (sortMode === mode) {
-      setSortDir((dir) => (dir === 'desc' ? 'asc' : 'desc'))
-    } else {
-      setSortMode(mode)
-      setSortDir('desc')
-    }
+    setSortSpecs((specs) => {
+      const current = specs.find((s) => s.key === key)
+      if (!current) return [...specs, { key, dir: 'desc' }]
+      if (current.dir === 'desc') return specs.map((s) => (s.key === key ? { key, dir: 'asc' } : s))
+      return specs.filter((s) => s.key !== key)
+    })
   }
 
-  // Manual is the stored/drag order as-is; the other modes rank by each
-  // item's own totals (protein efficiency = protein per kcal, so a lean,
-  // high-protein food ranks above a calorie-dense one). Clicking an already
-  // active mode again flips sortDir to reverse the ranking.
+  // No keys = the stored/drag order as-is. Otherwise items rank by their own
+  // totals (protein efficiency = protein per kcal, so a lean, high-protein
+  // food ranks above a calorie-dense one). With two keys, a plain tie-break
+  // would do nothing — calories almost never tie exactly — so each item's
+  // rank on every key is summed and the lowest total leads; the key turned on
+  // first breaks ties.
   const sortedItems = useMemo(() => {
-    if (sortMode === 'manual') return filteredItems
-    const dirSign = sortDir === 'desc' ? 1 : -1
-    const ranked = filteredItems.map((item) => ({ item, totals: getFoodTotals(item) }))
-    ranked.sort((a, b) => {
-      if (sortMode === 'calories') return (b.totals.calories - a.totals.calories) * dirSign
-      // protein per kcal. A zero-calorie item carrying protein is the most
-      // efficient thing on the list, not the least — it used to score 0 and
-      // sink to the bottom alongside genuinely empty records.
-      const efficiency = (t: { protein: number; calories: number }) =>
-        t.calories > 0 ? t.protein / t.calories : t.protein > 0 ? Infinity : 0
-      const effA = efficiency(a.totals)
-      const effB = efficiency(b.totals)
-      // Compared, not subtracted: two Infinities subtract to NaN, which makes
-      // the whole comparator incoherent and the sort order arbitrary.
-      if (effA === effB) return 0
-      return (effB > effA ? 1 : -1) * dirSign
+    if (sortSpecs.length === 0) return filteredItems
+    // A zero-calorie item carrying protein is the most efficient thing on the
+    // list, not the least — it used to score 0 and sink to the bottom
+    // alongside genuinely empty records.
+    const valueOf = (key: SortKey, t: { protein: number; calories: number }) =>
+      key === 'calories' ? t.calories : t.calories > 0 ? t.protein / t.calories : t.protein > 0 ? Infinity : 0
+    const rows = filteredItems.map((item) => {
+      const totals = getFoodTotals(item)
+      return { item, values: sortSpecs.map((s) => valueOf(s.key, totals)), rankSum: 0 }
     })
-    return ranked.map(({ item }) => item)
-  }, [filteredItems, sortMode, sortDir])
+    // Compared, not subtracted: two Infinities subtract to NaN, which makes
+    // the whole comparator incoherent and the sort order arbitrary.
+    const compareOn = (i: number, a: (typeof rows)[number], b: (typeof rows)[number]) => {
+      const va = a.values[i]
+      const vb = b.values[i]
+      if (va === vb) return 0
+      return (vb > va ? 1 : -1) * (sortSpecs[i].dir === 'desc' ? 1 : -1)
+    }
+    if (sortSpecs.length > 1) {
+      sortSpecs.forEach((_, i) => {
+        const order = [...rows].sort((a, b) => compareOn(i, a, b))
+        // Equal values share the average of the ranks they span.
+        for (let start = 0; start < order.length; ) {
+          let end = start
+          while (end + 1 < order.length && compareOn(i, order[start], order[end + 1]) === 0) end++
+          for (let k = start; k <= end; k++) order[k].rankSum += (start + end) / 2
+          start = end + 1
+        }
+      })
+    }
+    rows.sort((a, b) => {
+      if (a.rankSum !== b.rankSum) return a.rankSum - b.rankSum
+      for (let i = 0; i < sortSpecs.length; i++) {
+        const c = compareOn(i, a, b)
+        if (c !== 0) return c
+      }
+      return 0
+    })
+    return rows.map(({ item }) => item)
+  }, [filteredItems, sortSpecs])
 
-  const reorderEnabled = isOwner && search.trim().length === 0 && sortMode === 'manual'
+  const sortArrow = (key: SortKey) => {
+    const spec = sortSpecs.find((s) => s.key === key)
+    return spec ? (spec.dir === 'desc' ? ' ↓' : ' ↑') : ''
+  }
+
+  const reorderEnabled = isOwner && search.trim().length === 0 && sortSpecs.length === 0
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const [modalClosing, setModalClosing] = useState(false)
@@ -1163,7 +1199,7 @@ function FoodBook({
             <div className="sort-bar">
               <button
                 type="button"
-                className={`sort-pill${sortMode === 'manual' ? ' is-active' : ''}`}
+                className={`sort-pill${sortSpecs.length === 0 ? ' is-active' : ''}`}
                 title="自訂順序，長按卡片可拖曳排序"
                 onClick={() => handleSortPillClick('manual')}
               >
@@ -1171,19 +1207,19 @@ function FoodBook({
               </button>
               <button
                 type="button"
-                className={`sort-pill${sortMode === 'calories' ? ' is-active' : ''}`}
-                title="依總熱量排序，再按一次可反向"
+                className={`sort-pill${sortArrow('calories') ? ' is-active' : ''}`}
+                title="依總熱量排序；再按反向，第三下關閉。可與蛋白質效率同時開啟"
                 onClick={() => handleSortPillClick('calories')}
               >
-                熱量{sortMode === 'calories' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                熱量{sortArrow('calories')}
               </button>
               <button
                 type="button"
-                className={`sort-pill${sortMode === 'protein' ? ' is-active' : ''}`}
-                title="每大卡的蛋白質，越高越前面；再按一次可反向"
+                className={`sort-pill${sortArrow('protein') ? ' is-active' : ''}`}
+                title="每大卡的蛋白質，越高越前面；再按反向，第三下關閉。可與熱量同時開啟"
                 onClick={() => handleSortPillClick('protein')}
               >
-                蛋白質效率{sortMode === 'protein' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                蛋白質效率{sortArrow('protein')}
               </button>
               <button
                 type="button"
