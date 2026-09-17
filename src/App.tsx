@@ -77,7 +77,7 @@ function FoodBook({
   photoURL: string | null
   onSignIn: () => void
   onLogOut: () => void
-  signInError: boolean
+  signInError: string | null
 }) {
   const { items, setItems, loading: itemsLoading, loadError, retry: retryLoad } = useCloudItems(OWNER_UID)
   const {
@@ -1153,7 +1153,7 @@ function FoodBook({
                    session is separate from the standalone app's and may need
                    signing in again. */
                 <div className="signin-wrap">
-                  {signInError && <div className="upload-error">登入失敗，請重試</div>}
+                  {signInError && <div className="upload-error">登入失敗，請重試 ({signInError})</div>}
                   {isSignedIn ? (
                     <div className="readonly-badge">
                       <span className="readonly-badge-label">唯讀</span>
