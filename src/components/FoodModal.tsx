@@ -20,6 +20,8 @@ interface FoodModalProps {
   onSave: (overrides?: Partial<FoodDraft>) => Promise<boolean>
   onCancel: () => void
   onDelete: () => void
+  archived: boolean
+  onToggleArchive: () => void
   confirm: (message: string, options?: ConfirmOptions) => Promise<boolean>
 }
 
@@ -31,6 +33,8 @@ export function FoodModal({
   onSave,
   onCancel,
   onDelete,
+  archived,
+  onToggleArchive,
   confirm,
 }: FoodModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1371,9 +1375,14 @@ export function FoodModal({
                   </button>
                 </div>
               ) : (
-                <button type="button" className="btn-delete-text" onClick={() => setConfirmDelete(true)}>
-                  刪除紀錄
-                </button>
+                <div className="record-actions">
+                  <button type="button" className="btn-archive-text" onClick={onToggleArchive}>
+                    {archived ? '取消封存' : '封存'}
+                  </button>
+                  <button type="button" className="btn-delete-text" onClick={() => setConfirmDelete(true)}>
+                    刪除紀錄
+                  </button>
+                </div>
               )
             )}
           </div>

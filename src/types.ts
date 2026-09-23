@@ -47,6 +47,10 @@ export interface FoodItem {
   // consumed — mirrors FoodSubItem.qty, but for the item itself rather than
   // one of its sub-items. Missing/undefined means 1.
   qty?: number
+  // Kept on record but off the main list — for things no longer eaten that
+  // are still worth looking up. Missing/undefined means active; unarchiving
+  // drops the key rather than writing false.
+  archived?: boolean
 }
 
 export type FoodIngredientDraft = {

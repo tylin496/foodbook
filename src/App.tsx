@@ -228,17 +228,32 @@ function FoodBook({
     pruneGuestOverrides(new Set(items.map((item) => item.id)))
   }, [isOwner, itemsLoading, items, pruneGuestOverrides])
 
+  // The main list and the 封存 view are two disjoint slices of the same
+  // records; everything downstream (search, sort, 全選, count) works on
+  // whichever one is showing.
+  const [showArchived, setShowArchived] = useState(false)
+  const archivedCount = useMemo(() => items.filter((item) => item.archived).length, [items])
+  const viewItems = useMemo(
+    () => displayItems.filter((item) => !!item.archived === showArchived),
+    [displayItems, showArchived],
+  )
+  // Unarchiving the last one would otherwise strand the view on an empty page
+  // with the pill that leads out of it gone.
+  useEffect(() => {
+    if (showArchived && archivedCount === 0) setShowArchived(false)
+  }, [showArchived, archivedCount])
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return displayItems
-    return displayItems.filter((item) => {
+    if (!q) return viewItems
+    return viewItems.filter((item) => {
       if (item.name.toLowerCase().includes(q)) return true
       return (item.subItems ?? []).some((sub) => {
         if (sub.name.toLowerCase().includes(q)) return true
         return (sub.ingredients ?? []).some((ing) => ing.name.toLowerCase().includes(q))
       })
     })
-  }, [displayItems, search])
+  }, [viewItems, search])
 
   // Active sort keys in the order they were turned on; empty = manual order.
   const [sortSpecs, setSortSpecs] = useState<SortSpec[]>(() => {
@@ -1004,6 +1019,40 @@ function FoodBook({
     return result.ok
   }
 
+  // Not a delete: the record stays whole, it just leaves the main list. Also
+  // drops it from the selection — a hidden card still counting toward the
+  // total is exactly what the hiddenSelectedCount hint exists to explain.
+  const toggleArchive = (id: string) => {
+    if (!isOwner) return
+    const item = items.find((i) => i.id === id)
+    if (!item) return
+    const archiving = !item.archived
+    const apply = (archive: boolean) => {
+      bulkFlipRef.current = true
+      captureRects()
+      commit((prev) =>
+        prev.map((i) => {
+          if (i.id !== id) return i
+          if (archive) return { ...i, archived: true }
+          const { archived: _archived, ...rest } = i
+          return rest
+        }),
+      )
+    }
+    if (editingId === id) closeModal()
+    apply(archiving)
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+    toast(archiving ? `已封存「${item.name}」` : `已取消封存「${item.name}」`, {
+      label: '復原',
+      onClick: () => apply(!archiving),
+    })
+  }
+
   const deleteItem = async (id: string) => {
     if (!isOwner) return
     // FoodModal gates this call with its own inline "確定刪除？" confirm —
@@ -1066,9 +1115,10 @@ function FoodBook({
             <div className="title-row">
               <h1>Foodbook</h1>
               <span className="item-count">
-                {filteredItems.length === items.length
-                  ? `${items.length} 筆`
-                  : `${filteredItems.length} / ${items.length} 筆`}
+                {showArchived && '封存 '}
+                {filteredItems.length === viewItems.length
+                  ? `${viewItems.length} 筆`
+                  : `${filteredItems.length} / ${viewItems.length} 筆`}
               </span>
             </div>
 
@@ -1210,6 +1260,21 @@ function FoodBook({
               >
                 蛋白質效率{sortArrow('protein')}
               </button>
+              {archivedCount > 0 && (
+                <button
+                  type="button"
+                  className={`sort-pill sort-archive${showArchived ? ' is-active' : ''}`}
+                  aria-pressed={showArchived}
+                  title={showArchived ? '回到主清單' : '查看已封存的紀錄'}
+                  onClick={() => {
+                    bulkFlipRef.current = true
+                    captureRects()
+                    setShowArchived((v) => !v)
+                  }}
+                >
+                  封存 {archivedCount}
+                </button>
+              )}
               <button
                 type="button"
                 className={`sort-pill sort-select-all${allSelected ? ' is-active' : ''}`}
@@ -1245,7 +1310,9 @@ function FoodBook({
           )}
 
           {hasAnyItems && !hasResults && (
-            <div className="no-results">找不到符合「{search}」的紀錄</div>
+            <div className="no-results">
+              {search.trim() ? `找不到符合「${search}」的紀錄` : '所有紀錄都已封存'}
+            </div>
           )}
 
           {hasAnyItems && hasResults && (
@@ -1311,6 +1378,8 @@ function FoodBook({
           onSave={handleSave}
           onCancel={closeModal}
           onDelete={() => editingId && deleteItem(editingId)}
+          archived={!!items.find((item) => item.id === editingId)?.archived}
+          onToggleArchive={() => editingId && toggleArchive(editingId)}
           confirm={confirm}
         />
       )}
