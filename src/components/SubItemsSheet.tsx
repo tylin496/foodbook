@@ -546,7 +546,7 @@ export function SubItemsSheet({
                               const displayQty = ingSelected ? ingQty : (ing.qty ?? 1)
                               return (
                                 <>
-                                  {formatAmount(ing.weight * displayQty)}g {formatAmount(ing.calories * displayQty)}kcal{' '}
+                                  {formatAmount(ing.weight * displayQty)}g {formatAmount(ing.calories * displayQty)}kcal/
                                   {formatAmount(ing.protein * displayQty)}g
                                 </>
                               )

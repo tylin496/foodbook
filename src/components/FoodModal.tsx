@@ -946,7 +946,9 @@ export function FoodModal({
             <input
               id="food-name"
               className="input"
-              autoFocus
+              // Editing an existing record usually means fixing a number or a
+              // 菜單 — focusing the name there just threw up the keyboard.
+              autoFocus={!isEditing}
               value={draft.name}
               onChange={(e) => onChange({ ...draft, name: e.target.value })}
               placeholder="例如：雞胸肉"
@@ -980,7 +982,7 @@ export function FoodModal({
 
         <div className="number-fields">
           <div className="field">
-            <label htmlFor="food-weight">重量 (g){hasSubItems && ' 自動加總'}</label>
+            <label htmlFor="food-weight">重量 (g)</label>
             <input
               id="food-weight"
               className="input"
@@ -994,7 +996,7 @@ export function FoodModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="food-calories">熱量 (kcal){hasSubItems && ' 自動加總'}</label>
+            <label htmlFor="food-calories">熱量 (kcal)</label>
             <input
               id="food-calories"
               className="input"
@@ -1008,7 +1010,7 @@ export function FoodModal({
             />
           </div>
           <div className="field">
-            <label htmlFor="food-protein">蛋白質 (g){hasSubItems && ' 自動加總'}</label>
+            <label htmlFor="food-protein">蛋白質 (g)</label>
             <input
               id="food-protein"
               className="input"
@@ -1129,7 +1131,7 @@ export function FoodModal({
                         {!expanded && (
                           <div className="sub-item-row-collapsed-stats">
                             {sub.selected
-                              ? `${formatAmount(subTotals.calories)} kcal ${formatAmount(subTotals.protein)} g`
+                              ? `${formatAmount(subTotals.calories)}kcal/${formatAmount(subTotals.protein)}g`
                               : '未計入加總'}
                           </div>
                         )}
@@ -1201,6 +1203,10 @@ export function FoodModal({
                         />
                         <span className="input-unit">g</span>
                       </div>
+                    </div>
+                    {/* 份數 and its product share one line, so it reads as
+                        "× 2 ＝ 84g 270kcal/7.6g" instead of taking two rows. */}
+                    <div className="sub-item-qty-line">
                       <div className="sub-item-qty-wrap" title="份數（幾份）">
                         <span className="sub-item-qty-x">×</span>
                         <input
@@ -1214,13 +1220,13 @@ export function FoodModal({
                           aria-label="份數"
                         />
                       </div>
+                      {subTotals.qty !== 1 && (
+                        <span className="sub-item-qty-hint">
+                          ＝ {formatAmount(subTotals.weight)}g {formatAmount(subTotals.calories)}kcal/
+                          {formatAmount(subTotals.protein)}g
+                        </span>
+                      )}
                     </div>
-                    {subTotals.qty !== 1 && (
-                      <div className="sub-item-qty-hint">
-                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g{' '}
-                        {formatAmount(subTotals.calories)}kcal {formatAmount(subTotals.protein)}g
-                      </div>
-                    )}
 
                     <div
                       className={`ingredients-section${convertTarget?.kind === 'toIngredient' && convertTarget.subId === sub.id ? ' is-convert-target' : ''}`}
