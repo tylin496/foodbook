@@ -1201,23 +1201,23 @@ export function FoodModal({
                         />
                         <span className="input-unit">g</span>
                       </div>
-                    </div>
-                    <div className="sub-item-qty-wrap" title="份數（幾份）">
-                      <span className="sub-item-qty-x">×</span>
-                      <input
-                        className="input sub-item-qty"
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        step="1"
-                        value={sub.qty}
-                        onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
-                        aria-label="份數"
-                      />
+                      <div className="sub-item-qty-wrap" title="份數（幾份）">
+                        <span className="sub-item-qty-x">×</span>
+                        <input
+                          className="input sub-item-qty"
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="1"
+                          value={sub.qty}
+                          onChange={(e) => updateSubItem(sub.id, { qty: clampNonNegative(e.target.value) })}
+                          aria-label="份數"
+                        />
+                      </div>
                     </div>
                     {subTotals.qty !== 1 && (
                       <div className="sub-item-qty-hint">
-                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g
+                        × {formatAmount(subTotals.qty)} ＝ {formatAmount(subTotals.weight)}g{' '}
                         {formatAmount(subTotals.calories)}kcal {formatAmount(subTotals.protein)}g
                       </div>
                     )}

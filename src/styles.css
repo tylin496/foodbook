@@ -1233,10 +1233,13 @@ html, body, #root { height: var(--app-height); }
 .sub-item-remove::before {
   content: ''; position: absolute; inset: -3px;
 }
+/* 份數 sits on the same line as the three numbers — on its own line it
+   added a second 46px row that made an expanded 菜單 card needlessly tall. */
 .sub-item-row-numbers {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 6px;
+  align-items: center;
 }
-.sub-item-row-numbers .input { font-size: 16px; }
+.sub-item-row-numbers .input { font-size: 16px; min-height: 38px; padding-left: 10px; }
 /* A placeholder ("重量") vanishes the moment a value is typed, leaving three
    identical-looking numbers with no way to tell which is which — this keeps
    the unit visible in the corner regardless of whether the field is filled. */
