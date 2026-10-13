@@ -48,12 +48,30 @@ function sameTotals(a: Totals, b: Totals): boolean {
   )
 }
 
+// One line per row, nested with tree branches (├ └ │) so a pasted list keeps
+// its levels even where indentation collapses. Only what's counted is copied:
+// an unchecked sub-item or ingredient adds nothing to the totals above it, so
+// listing it read as part of the meal.
+type TextNode = { label: string; children: TextNode[] }
+
+function formatStats(t: Totals): string {
+  return `${formatAmount(t.weight)}g ${formatAmount(t.calories)}kcal/${formatAmount(t.protein)}g`
+}
+
+function renderTree(nodes: TextNode[], prefix: string, lines: string[]) {
+  nodes.forEach((node, i) => {
+    const last = i === nodes.length - 1
+    lines.push(`${prefix}${last ? '└ ' : '├ '}${node.label}`)
+    renderTree(node.children, `${prefix}${last ? '   ' : '│  '}`, lines)
+  })
+}
+
 export function formatItemsAsText(
   items: FoodItem[],
   overridesByItem?: Record<string, SubItemOverrides>,
   ingredientOverridesByItem?: Record<string, IngredientOverrides>,
 ): string {
-  const lines: string[] = []
+  const blocks: string[] = []
 
   items.forEach((item) => {
     const overrides = overridesByItem?.[item.id]
@@ -61,22 +79,28 @@ export function formatItemsAsText(
     const totals = getFoodTotals(item, overrides, ingredientOverrides)
     const subItems = item.subItems ?? []
 
-    const pushIngredients = (sub: FoodSubItem, parentQty: number, indent: string) => {
-      for (const ing of sub.ingredients ?? []) {
+    const ingredientNodes = (sub: FoodSubItem, parentQty: number): TextNode[] =>
+      (sub.ingredients ?? []).flatMap((ing) => {
         const ownQty = getEffectiveIngredientQty(ing, ingredientOverrides)
-        const ingQty = (ownQty > 0 ? ownQty : 1) * parentQty
-        lines.push(
-          `${indent}${ownQty > 0 ? '☑' : '☐'} ${formatSubItemName({ ...ing, qty: ownQty > 0 ? ownQty : 1 })}：${formatAmount(ing.weight * ingQty)}g`,
-        )
-        lines.push(`${indent}  ${formatAmount(ing.calories * ingQty)}kcal / ${formatAmount(ing.protein * ingQty)}g`)
-      }
-    }
+        if (ownQty <= 0) return []
+        const qty = ownQty * parentQty
+        return [
+          {
+            label: `${formatSubItemName({ ...ing, qty: ownQty })} ${formatStats({
+              weight: ing.weight * qty,
+              calories: ing.calories * qty,
+              protein: ing.protein * qty,
+            })}`,
+            children: [],
+          },
+        ]
+      })
 
     // A single counted sub-item that carries the item's whole numbers just
-    // restates the two header lines verbatim — fold its name into the item's
-    // and let its ingredients (if any) hang straight off the item instead.
+    // restates the header line — fold its name into the item's and let its
+    // ingredients (if any) hang straight off the item instead.
     // Child lines are priced at one portion of the item, matching the sheet;
-    // only the header lines below carry the item's own 份數, which its ×N names.
+    // only the header line carries the item's own 份數, which its ×N names.
     const baseQty = getEffectiveBaseQty(item, overrides)
     const lone = subItems.length === 1 ? subItems[0] : null
     const loneQty = lone ? getEffectiveSubItemQty(lone, overrides) : 0
@@ -86,34 +110,29 @@ export function formatItemsAsText(
         : null
 
     const foldedName = folded && folded.name !== item.name ? formatSubItemName({ ...folded, qty: loneQty }) : null
-    // The totals below already carry the item's own portions; without this the
+    // The totals already carry the item's own portions; without the ×N the
     // doubled numbers would arrive unexplained.
     const itemName = formatSubItemName({ ...item, qty: baseQty })
-    lines.push(foldedName ? `${itemName}（${foldedName}）` : itemName)
-    lines.push(`   ${formatAmount(totals.weight)}g`)
-    lines.push(`   ${formatAmount(totals.calories)}kcal / ${formatAmount(totals.protein)}g`)
+    const lines = [`${foldedName ? `${itemName}（${foldedName}）` : itemName} ${formatStats(totals)}`]
 
-    if (folded) {
-      pushIngredients(folded, loneQty, '   ')
-      return
-    }
-
-    for (const sub of subItems) {
-      const subQty = getEffectiveSubItemQty(sub, overrides)
-      // An excluded row is still worth listing (it's part of the record), but
-      // pricing it at qty 0 would print a meaningless "0g / 0kcal" — show one
-      // portion instead and let the ☐ say it isn't counted.
-      const qty = subQty > 0 ? subQty : 1
-      const subTotals = getSubItemTotals(sub, qty, ingredientOverrides)
-      lines.push(
-        `   ${subQty > 0 ? '☑' : '☐'} ${formatSubItemName({ ...sub, qty })}：${formatAmount(subTotals.weight)}g`,
-      )
-      lines.push(`     ${formatAmount(subTotals.calories)}kcal / ${formatAmount(subTotals.protein)}g`)
-      pushIngredients(sub, qty, '     ')
-    }
+    const children = folded
+      ? ingredientNodes(folded, loneQty)
+      : subItems.flatMap((sub) => {
+          const qty = getEffectiveSubItemQty(sub, overrides)
+          if (qty <= 0) return []
+          return [
+            {
+              label: `${formatSubItemName({ ...sub, qty })} ${formatStats(getSubItemTotals(sub, qty, ingredientOverrides))}`,
+              children: ingredientNodes(sub, qty),
+            },
+          ]
+        })
+    renderTree(children, '', lines)
+    blocks.push(lines.join('\n'))
   })
 
-  return lines.join('\n')
+  // A blank line between items, so where one meal ends is plain at a glance.
+  return blocks.join('\n\n')
 }
 
 // navigator.clipboard exists only on secure origins. Served over plain http —

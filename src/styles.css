@@ -732,7 +732,7 @@ html, body, #root { height: var(--app-height); }
    struck through. It used to be a different treatment in each (outline here,
    grey text there, opacity .55 elsewhere, and nothing at all on the edit
    form's ingredient rows), and at 11px a grey-on-grey chip was near enough
-   invisible. The ☐ in the copied text says the same thing. */
+   invisible. (Copied text just leaves excluded rows out.) */
 .food-card .sub-item-chip.is-excluded {
   color: var(--ink-4);
   background: transparent;
