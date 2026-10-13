@@ -1419,7 +1419,11 @@ html, body, #root { height: var(--app-height); }
 /* Nested one step down, so a step down in size — 16px visible, 32×32
    tappable. The grip to its left gives up the 4px they overlap: a mis-tap
    there toggles instead of starting a drag, the cheaper of the two mistakes. */
-.fb-check.is-sm { width: 16px; height: 16px; background: var(--bg-soft); }
+.fb-check.is-sm { width: 16px; height: 16px; }
+/* Only the unchecked one takes the soft fill: this rule sits after .is-on at
+   the same specificity, so unscoped it repainted a checked ingredient the
+   same pale grey and left a white tick on it that was barely visible. */
+.fb-check.is-sm:not(.is-on) { background: var(--bg-soft); }
 .fb-check.is-sm::before { inset: -8px; }
 
 /* Desktop: the chip sheet reads as a normal centered dialog instead of a
