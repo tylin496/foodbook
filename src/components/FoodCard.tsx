@@ -74,6 +74,8 @@ export function FoodCard({
   // a chip is the card's only way into the sheet, and a card that had neither
   // sub-items nor a weight had no way to reach its 份數 at all.
   const weightAsSubItem = subItems.length === 0
+  // Every 菜單 unchecked: 0 kcal / 0 g read as wrong data, not "nothing picked".
+  const nothingCounted = subItems.length > 0 && !subItems.some((sub) => isSubItemSelected(sub, guestOverrides))
 
   // A guest's qty change lives in an override, not on the record, so the chip
   // has to read the effective qty or it keeps showing the shared ×N. An
@@ -344,7 +346,8 @@ export function FoodCard({
               aria-label={`${item.name} 明細`}
               onClick={handleChipClick}
             >
-              {formatAmount(item.weight)} g
+              {/* Drinks often have no weight on record — "0 g" read as an error. */}
+              {Number(item.weight) > 0 ? `${formatAmount(item.weight)} g` : `${formatAmount(baseQty)} 份`}
             </button>
           </div>
         )}
@@ -402,14 +405,14 @@ export function FoodCard({
             </div>
           </div>
         )}
-        <div className="stat-grid">
+        <div className={`stat-grid${nothingCounted ? ' is-empty' : ''}`}>
           <div className="stat">
-            <div className="stat-value">{formatAmount(displayCalories)}</div>
+            <div className="stat-value">{nothingCounted ? '—' : formatAmount(displayCalories)}</div>
             <div className="stat-label">KCAL</div>
           </div>
           <div className="stat-rule" />
           <div className="stat">
-            <div className="stat-value is-protein">{formatAmount(displayProtein)}</div>
+            <div className="stat-value is-protein">{nothingCounted ? '—' : formatAmount(displayProtein)}</div>
             <div className="stat-label">蛋白 G</div>
           </div>
         </div>

@@ -20,6 +20,14 @@ export function useAuth() {
   const [signInError, setSignInError] = useState<string | null>(null)
 
   useEffect(() => {
+    // If restoring the saved session fails (IndexedDB "closing/hidden" when
+    // the page is backgrounded mid-launch), onAuthStateChanged never fires
+    // and App rendered nothing at all. Fall through to the signed-out view
+    // instead of a blank page.
+    auth.authStateReady().catch((err) => {
+      console.error('[auth] restoring the session failed', err)
+      setLoading(false)
+    })
     return onAuthStateChanged(auth, (u) => {
       setUser(u)
       setLoading(false)

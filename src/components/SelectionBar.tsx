@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, CopyX, Minus, Plus, X } from 'lucide-react'
 import { useCountUp } from '../useCountUp'
+import { formatAmount } from '../utils'
 
 interface SelectionBarProps {
   count: number
@@ -109,7 +110,7 @@ export function SelectionBar({
           live region to useCountUp's output would fire it once per frame. */}
       <div className="sr-only" role="status" aria-live="polite">
         {visible
-          ? `已選 ${count} 項，共 ${Math.round(totalCalories)} 大卡，蛋白質 ${Math.round(totalProtein)} 公克`
+          ? `已選 ${count} 項，共 ${Math.round(totalCalories)} 大卡，蛋白質 ${formatAmount(totalProtein)} 公克`
           : ''}
       </div>
       <div className="selection-bar-name">
@@ -123,7 +124,7 @@ export function SelectionBar({
           <span className="unit">kcal</span>
         </div>
         <div className="selection-bar-total">
-          <span className="value">{Math.round(displayProtein)}</span>
+          <span className="value">{formatAmount(displayProtein)}</span>
           <span className="unit">蛋白 g</span>
         </div>
       </div>
