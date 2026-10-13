@@ -239,7 +239,7 @@ export function FoodModal({
         toNumber(target.calories) > 0 ||
         toNumber(target.protein) > 0 ||
         (target.ingredients?.length ?? 0) > 0)
-    if (hasContent && !(await confirm('確定要刪除這個子項目嗎？'))) return
+    if (hasContent && !(await confirm('確定要刪除這個菜單嗎？'))) return
     onChange({ ...draft, subItems: draft.subItems.filter((sub) => sub.id !== id) })
     setExpandedIds((prev) => {
       if (!prev.has(id)) return prev
@@ -1042,7 +1042,7 @@ export function FoodModal({
 
         {hasSubItems && (
           <div className="auto-sum-hint">
-            這三個數字由下方子項目自動加總，要修改請改子項目的數字
+            這三個數字由下方菜單自動加總，要修改請改菜單的數字
           </div>
         )}
 
@@ -1051,16 +1051,16 @@ export function FoodModal({
         <div className="sub-items-section">
           {hasSubItems ? (
             <div className="sub-items-header">
-              <span>子項目 勾選要計入加總的項目</span>
+              <span>菜單 勾選要計入加總的項目</span>
               <button type="button" className="btn-ghost btn-add-subitem" onClick={addSubItem}>
                 <Plus size={14} />
-                新增子項目
+                新增菜單
               </button>
             </div>
           ) : (
             <button type="button" className="btn-add-subitem-row" onClick={addSubItem}>
               <Plus size={14} />
-              新增子項目
+              新增菜單
             </button>
           )}
 
@@ -1088,7 +1088,7 @@ export function FoodModal({
                       <button
                         type="button"
                         className="sub-item-grip"
-                        aria-label="拖曳排序子項目"
+                        aria-label="拖曳排序菜單"
                         onPointerDown={(e) => handleSubItemGripDown(e, sub.id)}
                         onPointerMove={handleSubItemGripMove}
                         onPointerUp={handleSubItemGripUp}
@@ -1118,7 +1118,7 @@ export function FoodModal({
                           value={sub.name}
                           onChange={(e) => updateSubItem(sub.id, { name: e.target.value })}
                           placeholder="例如：加鯛魚"
-                          aria-label="子項目名稱"
+                          aria-label="菜單名稱"
                           // Only a freshly added row mounts already-expanded, so this
                           // focuses new sub-items without every row grabbing focus
                           // when the modal opens.
@@ -1138,7 +1138,7 @@ export function FoodModal({
                       <button
                         type="button"
                         className="sub-item-remove"
-                        aria-label="刪除子項目"
+                        aria-label="刪除菜單"
                         onClick={(e) => {
                           e.stopPropagation()
                           removeSubItem(sub.id)
@@ -1150,7 +1150,7 @@ export function FoodModal({
                         type="button"
                         className="sub-item-expand"
                         aria-expanded={expanded}
-                        aria-label={expanded ? '收合子項目' : '展開子項目'}
+                        aria-label={expanded ? '收合菜單' : '展開菜單'}
                         onClick={(e) => {
                           e.stopPropagation()
                           toggleExpanded(sub.id)

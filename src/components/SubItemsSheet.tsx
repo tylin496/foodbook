@@ -399,7 +399,7 @@ export function SubItemsSheet({
           {/* A card with no sub-items still opens here — this is where its 份數
               lives, and the chip on the card is the only way in. */}
           {subItems.length === 0 && (
-            <div className="sub-items-sheet-empty">這筆紀錄沒有子項目，可在上方調整份數</div>
+            <div className="sub-items-sheet-empty">這筆紀錄沒有菜單，可在上方調整份數</div>
           )}
           {sortedRows.map(({ sub, activeQty }) => {
             const selected = activeQty > 0
