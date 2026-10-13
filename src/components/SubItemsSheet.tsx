@@ -430,7 +430,9 @@ export function SubItemsSheet({
                     aria-label={selected ? '取消計入加總' : '計入加總'}
                     onClick={() => {
                       captureRowRects()
-                      onSetQty(sub.id, activeQty > 0 ? 0 : 1)
+                      // Re-checking restores the qty set in the edit form, not
+                      // a flat 1 — unchecking only zeroes the live count.
+                      onSetQty(sub.id, activeQty > 0 ? 0 : (sub.qty ?? 1))
                     }}
                   >
                     {selected && <Check size={12} strokeWidth={3} />}
@@ -505,7 +507,7 @@ export function SubItemsSheet({
                                 // Same reason as captureRowRects above — the
                                 // rows below shift as this one changes size.
                                 captureIngredientRects(sub.id)
-                                onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : 1)
+                                onSetIngredientQty(sub.id, ing.id, ingQty > 0 ? 0 : (ing.qty ?? 1))
                               }}
                             >
                               {ingSelected && <Check size={9} strokeWidth={3} />}

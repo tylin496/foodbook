@@ -441,7 +441,7 @@ export function FoodCard({
             sheetChangedRef.current = true
             subItems.forEach((sub) => {
               const currentQty = getEffectiveSubItemQty(sub, guestOverrides)
-              onSetSubItemQty(item.id, sub.id, currentQty > 0 ? currentQty : 1)
+              onSetSubItemQty(item.id, sub.id, currentQty > 0 ? currentQty : (sub.qty ?? 1))
             })
           }}
           onClearAll={() => {
