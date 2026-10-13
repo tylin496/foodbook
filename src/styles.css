@@ -1384,6 +1384,8 @@ html, body, #root { height: var(--app-height); }
   display: flex; flex-direction: column; gap: var(--space-3);
   padding: 4px 18px 8px; margin: 0; max-height: none;
 }
+/* Same guard as .food-modal-body: a scrolling column must not shrink its rows. */
+.sub-items-sheet-list > * { flex-shrink: 0; }
 .sub-items-sheet-footer {
   flex: none; display: flex; align-items: center; justify-content: space-between;
   gap: 14px; padding: 12px 18px 0; border-top: 1px solid var(--rule);
@@ -1521,6 +1523,10 @@ html.has-dialog .page-scroll { overflow: hidden; }
   display: flex; flex-direction: column; gap: 16px;
   padding: 0 18px 14px;
 }
+/* This column scrolls, so its children must never shrink to fit — once an
+   expanded 菜單 overflowed it, flex squashed the Subway toggle to 19px and
+   the divider to nothing. */
+.food-modal-body > * { flex-shrink: 0; }
 .food-modal > .dialog-actions {
   flex: none; margin: 0; padding: 12px 18px calc(14px + var(--safe-bottom));
   border-top: 1px solid var(--rule);
