@@ -895,6 +895,9 @@ html, body, #root { height: var(--app-height); }
     0 0 0 .5px var(--glass-edge);
   animation: glass-in var(--dur-enter) var(--ease-enter);
 }
+/* The LiftOS button is a third 32px icon (+2px gap): widen by exactly that, so
+   the name column keeps its 93px instead of shrinking to one character. */
+.selection-bar:has(.selection-bar-liftos) { width: min(calc(100% - 32px), 554px); }
 :root[data-theme='dark'] .selection-bar { --bar-rule: var(--rule-strong); }
 .selection-bar.is-leaving {
   animation: glass-out var(--dur-exit) ease forwards;
