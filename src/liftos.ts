@@ -47,6 +47,17 @@ async function call<T>(body: unknown): Promise<T> {
   return data as T
 }
 
+export interface LiftosToday extends LiftosMacros {
+  date: string
+  calorie_target: number
+  protein_target: number
+}
+
+/** Read-only: what's logged today and the targets LiftOS judges it against. */
+export function peekLiftosToday() {
+  return call<LiftosToday>({ date: localDate(), peek: true })
+}
+
 export function addToLiftosToday(totals: { calories: number; protein: number }) {
   return call<LiftosAddResult>({
     date: localDate(),

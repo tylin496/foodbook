@@ -8,6 +8,7 @@ import type { FoodDraft } from './types'
 import { BASE_QTY_KEY, emptyDraft, getEffectiveBaseQty, getFoodTotals } from './types'
 import { FoodCard } from './components/FoodCard'
 import { SelectionBar } from './components/SelectionBar'
+import { LiftosDialog } from './components/LiftosDialog'
 import { FoodModal } from './components/FoodModal'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
@@ -722,15 +723,34 @@ function FoodBook({
   }
 
   // Opened on its own (not inside LiftOS, which takes the selection itself),
-  // the owner can add the selection straight onto LiftOS's intake for today.
-  // The selection is spent once it lands — leaving it up invites adding the
-  // same meal twice — and the toast carries the way back.
+  // the owner can add the selection straight onto LiftOS's intake for today —
+  // via LiftosDialog, which shows where it lands first. The selection is spent
+  // once it does (leaving it up invites adding the same meal twice) and the
+  // toast carries the way back.
+  const [liftosOpen, setLiftosOpen] = useState(false)
+  const [liftosClosing, setLiftosClosing] = useState(false)
+  const [liftosError, setLiftosError] = useState<string | null>(null)
   const [sendingToLiftos, setSendingToLiftos] = useState(false)
+  const openLiftos = () => {
+    if (selectedItems.length === 0) return
+    setLiftosError(null)
+    setLiftosClosing(false)
+    setLiftosOpen(true)
+  }
+  const closeLiftos = () => {
+    setLiftosClosing(true)
+    window.setTimeout(() => {
+      setLiftosOpen(false)
+      setLiftosClosing(false)
+    }, 180)
+  }
   const sendToLiftos = async () => {
     if (sendingToLiftos || selectedItems.length === 0) return
     setSendingToLiftos(true)
+    setLiftosError(null)
     try {
       const result = await addToLiftosToday({ calories: totals.calories, protein: totals.protein })
+      closeLiftos()
       clearSelection()
       toast(
         `已加入 LiftOS 今日 +${result.added.calories} kcal ${result.added.protein}g 今日共 ${result.calories} kcal`,
@@ -751,7 +771,7 @@ function FoodBook({
       )
     } catch (err) {
       console.error('[liftos] add failed', err)
-      toast(
+      setLiftosError(
         err instanceof LiftosError && (err.status === 401 || err.status === 403)
           ? 'LiftOS 不接受這個帳號的寫入'
           : '沒有加入 LiftOS，請確認網路連線後重試',
@@ -1408,9 +1428,21 @@ function FoodBook({
         onCopy={copySelectedAsText}
         copySignal={copySignal}
         copyFailed={copyFailed}
-        onSendToLiftos={isOwner && !embedContext ? sendToLiftos : undefined}
+        onSendToLiftos={isOwner && !embedContext ? openLiftos : undefined}
         sendingToLiftos={sendingToLiftos}
       />
+
+      {liftosOpen && (
+        <LiftosDialog
+          calories={totals.calories}
+          protein={totals.protein}
+          closing={liftosClosing}
+          sending={sendingToLiftos}
+          error={liftosError}
+          onConfirm={sendToLiftos}
+          onCancel={closeLiftos}
+        />
+      )}
 
       {modalOpen && activeId && (
         <FoodModal

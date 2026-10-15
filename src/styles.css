@@ -1040,6 +1040,48 @@ html, body, #root { height: var(--app-height); }
   .selection-bar-liftos { order: 6; }
   .selection-bar-copy { order: 7; margin-right: 6px; }
 }
+/* — LiftOS dialog — where the selection lands on LiftOS's today before it's
+   written. Same number language as the cards: mono, kcal in ink, the added
+   part in the accent the selection is drawn in. — */
+.liftos-dialog { width: min(360px, 100%); gap: 18px; }
+.liftos-dialog-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.liftos-dialog-date { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.liftos-macro { display: flex; flex-direction: column; gap: 8px; }
+.liftos-macro-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.liftos-macro-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.liftos-macro-figures {
+  display: flex; align-items: baseline; gap: 6px;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em; white-space: nowrap;
+}
+.liftos-macro-from { font-size: 15px; font-weight: 600; color: var(--ink-3); }
+.liftos-macro-arrow { font-size: 13px; color: var(--ink-4); }
+.liftos-macro-to { font-size: 22px; font-weight: 700; line-height: 1; color: var(--ink); }
+.liftos-macro-target { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; }
+.liftos-macro-bar {
+  position: relative; height: 8px; overflow: hidden;
+  border-radius: var(--radius-pill); background: var(--rule-strong);
+}
+.liftos-macro-bar > span { position: absolute; top: 0; bottom: 0; }
+.liftos-macro-existing { left: 0; background: var(--ink-3); }
+/* Grows in from where the day already stands, so the eye lands on the meal. */
+.liftos-macro-added {
+  background: var(--accent);
+  transform-origin: left; animation: liftos-grow 420ms var(--ease-enter) both 120ms;
+}
+@keyframes liftos-grow { from { transform: scaleX(0); } }
+/* The target, drawn only once the day runs past it. */
+.liftos-macro-mark { width: 2px; margin-left: -1px; background: var(--bg-card); }
+.liftos-macro-bar.is-loading { animation: liftos-sending 900ms ease-in-out infinite alternate; }
+.liftos-macro-foot {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 12px; font-weight: 600; color: var(--ink-3);
+}
+.liftos-macro-add { color: var(--accent); font-family: var(--font-mono); letter-spacing: -.02em; }
+.liftos-dialog-note { font-size: 13px; color: var(--ink-3); }
+.liftos-dialog-note.is-error { color: var(--bad); }
+.liftos-dialog .dialog-actions { margin-top: 0; }
+
 @keyframes pop {
   0% { transform: scale(1); }
   40% { transform: scale(1.2); }
