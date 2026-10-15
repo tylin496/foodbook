@@ -497,7 +497,7 @@ html, body, #root { height: var(--app-height); }
    the selection clears. Adding it moves nothing. */
 .page-scroll { transition: padding-bottom var(--dur-exit) var(--ease-press); }
 .page-scroll.has-selection { padding-bottom: calc(80px + var(--safe-bottom)); }
-@media (max-width: 540px) {
+@media (max-width: 580px) {
   .page-scroll.has-selection { padding-bottom: calc(127px + var(--safe-bottom)); }
 }
 .page-content { max-width: 1440px; margin: 0 auto; }
@@ -988,16 +988,19 @@ html, body, #root { height: var(--app-height); }
 /* The pop has already run by the time the clipboard admits it refused —
    this only recolours what is-copied put on screen, so it stays below it. */
 .selection-bar-copy.is-failed { color: var(--bad); }
+/* In flight: dimmed and inert, so a second tap can't add the meal twice. */
+.selection-bar-liftos:disabled { color: var(--ink-4); cursor: default; animation: liftos-sending 900ms ease-in-out infinite alternate; }
+.selection-bar-liftos:disabled:hover { background: none; }
+@keyframes liftos-sending { to { opacity: .4; } }
 .selection-bar-divider { display: none; }
-@media (max-width: 540px) {
-  /* The four fixed blocks — rule 1 + totals 180 + stepper 98 + icons 78 — plus
-     22px padding and 4×12px gaps measure 427px, and the bar runs 32px narrower
-     than the viewport. So one row physically stops fitting at 459px of
-     viewport, not at 430 (a 390pt phone leaves the bar 358px, a 440pt 16 Pro
-     Max 408px), and it stops fitting *usefully* well above that: at 481px the
-     name column is down to 22px, one ellipsis. Switch shape at 540px, where
-     the name still gets 81px — compressing type and controls instead would
-     lose legibility and still overflow. */
+@media (max-width: 580px) {
+  /* The four fixed blocks — rule 1 + totals 180 + stepper 98 + icons 112
+     (three, with LiftOS) — plus 22px padding and 4×12px gaps measure 461px,
+     and the bar runs 32px narrower than the viewport. So one row physically
+     stops fitting at 493px of viewport (a 390pt phone leaves the bar 358px, a
+     440pt 16 Pro Max 408px), and it stops fitting *usefully* well above that.
+     Switch shape at 580px, where the name still gets 87px — compressing type
+     and controls instead would lose legibility and still overflow. */
   /* Row 1 is what's selected (name + its portions + 清除), row 2 the result
      (totals + 複製). Same type scale, icon size, stepper and number columns as
      the wide bar — only the arrangement differs. */
@@ -1031,7 +1034,8 @@ html, body, #root { height: var(--app-height); }
     order: 4; display: block; width: 100%; height: 1px; background: var(--rule-strong);
   }
   .selection-bar-totals { order: 5; flex: 1; align-items: center; height: 52px; padding-left: 14px; }
-  .selection-bar-copy { order: 6; margin-right: 6px; }
+  .selection-bar-liftos { order: 6; }
+  .selection-bar-copy { order: 7; margin-right: 6px; }
 }
 @keyframes pop {
   0% { transform: scale(1); }
@@ -1550,7 +1554,7 @@ html.has-dialog .page-scroll { overflow: hidden; }
 }
 /* Clears the selection bar — 48px of pill, 95px of two-row panel. */
 .toast-stack.is-raised { bottom: calc(80px + var(--safe-bottom)); }
-@media (max-width: 540px) {
+@media (max-width: 580px) {
   .toast-stack.is-raised { bottom: calc(127px + var(--safe-bottom)); }
 }
 .toast {

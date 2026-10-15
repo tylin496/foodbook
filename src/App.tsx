@@ -14,6 +14,7 @@ import { SubwayScreen, SUBWAY_CALCULATOR_URL } from './components/SubwayScreen'
 import { copyText, formatItemsAsText, generateId, roundAmount, sortBySelected, toNumber } from './utils'
 import { useConfirm } from './useConfirm'
 import { embedContext, postSelectionTotals } from './embed'
+import { addToLiftosToday, LiftosError, undoLiftosAdd } from './liftos'
 import { createEdgeAutoScroll } from './autoScroll'
 import { useToasts } from './useToasts'
 import { Toasts } from './components/Toasts'
@@ -720,6 +721,46 @@ function FoodBook({
     })
   }
 
+  // Opened on its own (not inside LiftOS, which takes the selection itself),
+  // the owner can add the selection straight onto LiftOS's intake for today.
+  // The selection is spent once it lands — leaving it up invites adding the
+  // same meal twice — and the toast carries the way back.
+  const [sendingToLiftos, setSendingToLiftos] = useState(false)
+  const sendToLiftos = async () => {
+    if (sendingToLiftos || selectedItems.length === 0) return
+    setSendingToLiftos(true)
+    try {
+      const result = await addToLiftosToday({ calories: totals.calories, protein: totals.protein })
+      clearSelection()
+      toast(
+        `已加入 LiftOS 今日 +${result.added.calories} kcal ${result.added.protein}g 今日共 ${result.calories} kcal`,
+        {
+          label: '復原',
+          onClick: () => {
+            undoLiftosAdd(result)
+              .then(() => toast('已從 LiftOS 今日移除'))
+              .catch((err) =>
+                toast(
+                  err instanceof LiftosError && err.status === 409
+                    ? 'LiftOS 今日之後又有變動，沒有復原'
+                    : '沒有復原，請確認網路連線後重試',
+                ),
+              )
+          },
+        },
+      )
+    } catch (err) {
+      console.error('[liftos] add failed', err)
+      toast(
+        err instanceof LiftosError && (err.status === 401 || err.status === 403)
+          ? 'LiftOS 不接受這個帳號的寫入'
+          : '沒有加入 LiftOS，請確認網路連線後重試',
+      )
+    } finally {
+      setSendingToLiftos(false)
+    }
+  }
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -1367,6 +1408,8 @@ function FoodBook({
         onCopy={copySelectedAsText}
         copySignal={copySignal}
         copyFailed={copyFailed}
+        onSendToLiftos={isOwner && !embedContext ? sendToLiftos : undefined}
+        sendingToLiftos={sendingToLiftos}
       />
 
       {modalOpen && activeId && (

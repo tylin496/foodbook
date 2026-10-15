@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Copy, CopyX, Minus, Plus, X } from 'lucide-react'
+import { Check, Copy, CopyX, Dumbbell, Minus, Plus, X } from 'lucide-react'
 import { useCountUp } from '../useCountUp'
 import { formatAmount } from '../utils'
 
@@ -20,6 +20,10 @@ interface SelectionBarProps {
   copySignal: number
   // Arrives after the signal, once the write is known to have failed.
   copyFailed: boolean
+  // Adds the selection to LiftOS's intake for today (see liftos.ts). Absent
+  // when it can't: a guest, or this app already framed inside LiftOS.
+  onSendToLiftos?: () => void
+  sendingToLiftos?: boolean
 }
 
 export function SelectionBar({
@@ -33,6 +37,8 @@ export function SelectionBar({
   onCopy,
   copySignal,
   copyFailed,
+  onSendToLiftos,
+  sendingToLiftos = false,
 }: SelectionBarProps) {
   const [copied, setCopied] = useState(false)
   const visible = count > 0
@@ -145,10 +151,23 @@ export function SelectionBar({
           </button>
         </div>
       )}
-      {/* Two rows below 540px: 清除 rides with what's selected on the top row,
-          複製 with the totals it copies on the bottom one. */}
+      {/* Two rows below 580px: 清除 rides with what's selected on the top row,
+          LiftOS and 複製 with the totals they act on on the bottom one. */}
       <div className="selection-bar-divider" />
       <div className="selection-bar-actions">
+        {onSendToLiftos && (
+          <button
+            type="button"
+            className="selection-bar-btn selection-bar-liftos"
+            onClick={onSendToLiftos}
+            disabled={sendingToLiftos}
+            aria-busy={sendingToLiftos}
+            aria-label="加入 LiftOS 今日"
+            title="加入 LiftOS 今日"
+          >
+            <Dumbbell size={16} />
+          </button>
+        )}
         <button
           type="button"
           ref={copyRef}
